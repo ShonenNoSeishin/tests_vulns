@@ -14,6 +14,15 @@ Les scripts de `php2shell/` et `broccoli2shell/` sont en **lecture seule par dé
 | [`php2shell/`](php2shell/) | PHP2Shell — RCE PHP non authentifiée via HTTP | CVE-2026-109618, CVE-2026-109619 |
 | [`broccoli2shell/`](broccoli2shell/) | Broccoli2Shell / Node2Shell / HTTP2Shell — décodeur Brotli (Node.js, Python, .NET, Linux, IIS) | CVE-2026-111497 |
 
+## Quelle action effectuer une fois une faille détectée ?
+
+[`REMEDIATION.md`](REMEDIATION.md) donne un **arbre de décision** : type de machine
+(VM/LXC/bare-metal/conteneur) → OS (Windows/Linux) → distribution/version → mode
+d'installation (gestionnaire de paquets, Docker, Snap) → faille concernée → doc précise
+à lire et commande type à lancer. Il ne répète pas les tableaux de versions corrigées
+(déjà dans le `README.md` de chaque dossier) : il sert uniquement à retrouver vite "je
+suis dans ce cas précis, quelle commande je lance ?".
+
 ## Scan public (sans accès à la machine)
 
 [`public-scan/`](public-scan/) explique comment installer nmap et scanner un site web ou une IP
