@@ -99,10 +99,10 @@ Il enchaîne les trois commandes ci-dessus et termine par un rappel explicite de
 **n'affiche jamais** de ligne "Confiance : COMPLÈTE" comme les scripts des deux autres dossiers :
 un scan réseau externe ne peut structurellement pas l'atteindre.
 
-> Script relu avec soin, mais **pas exécuté contre une vraie cible dans cet environnement** (nmap
-> n'y est pas installé et l'accès `sudo` n'y est pas disponible pour l'installer). Pour un test
-> inoffensif avant de l'utiliser pour de vrai, nmap fournit sa propre cible publique d'essai,
-> explicitement ouverte à cet usage : `./scan_public.sh scanme.nmap.org`.
+> Testé contre `scanme.nmap.org` (la cible publique d'essai officielle de nmap, explicitement
+> ouverte à cet usage) : les trois sections s'exécutent correctement, sans version PHP ni Brotli
+> détectés sur cette cible (attendu, elle ne sert ni l'un ni l'autre). Pour un test inoffensif
+> avant de l'utiliser sur votre propre périmètre : `./scan_public.sh scanme.nmap.org`.
 
 ## Références
 
