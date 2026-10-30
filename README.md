@@ -5,7 +5,7 @@ Boîte à outils de détection — un dossier par faille, chacun avec :
 - un script de détection **autonome** (un seul fichier, aucune dépendance à un autre script) pour Linux/macOS (bash) et pour Windows (PowerShell) ;
 - un `README.md` qui explique la faille, donne les versions corrigées et explique comment vérifier qu'une machine est concernée.
 
-Tous les scripts sont en **lecture seule par défaut** : ils n'exploitent rien, ne modifient rien, et n'envoient aucune requête à une application cible. Ils se contentent d'inventorier les versions installées (binaires, paquets système, runtimes, conteneurs) et de les comparer aux versions connues comme corrigées.
+Les scripts de `php2shell/` et `broccoli2shell/` sont en **lecture seule par défaut** : ils n'exploitent rien, ne modifient rien, et n'envoient aucune requête à une application cible — ils inventorient les versions installées (binaires, paquets système, runtimes, conteneurs) localement, sur la machine où ils tournent. [`public-scan/`](public-scan/) est différent : c'est une **reconnaissance réseau active** (via nmap) pour le cas où vous n'avez qu'un nom de domaine ou une IP publique, sans accès shell — voir l'avertissement dans son `README.md` avant de l'utiliser.
 
 ## Failles couvertes
 
@@ -13,6 +13,16 @@ Tous les scripts sont en **lecture seule par défaut** : ils n'exploitent rien, 
 |---|---|---|
 | [`php2shell/`](php2shell/) | PHP2Shell — RCE PHP non authentifiée via HTTP | CVE-2026-109618, CVE-2026-109619 |
 | [`broccoli2shell/`](broccoli2shell/) | Broccoli2Shell / Node2Shell / HTTP2Shell — décodeur Brotli (Node.js, Python, .NET, Linux, IIS) | CVE-2026-111497 |
+
+## Scan public (sans accès à la machine)
+
+[`public-scan/`](public-scan/) explique comment installer nmap et scanner un site web ou une IP
+publique **de l'extérieur**, pour les deux failles ci-dessus — utile pour un premier passage sur
+tout votre périmètre public avant d'aller auditer chaque machine trouvée avec les scripts locaux.
+**Lisez l'avertissement légal du dossier avant de l'utiliser** : contrairement aux deux autres
+dossiers, il contacte réellement la cible, et ses résultats sont par nature une indication, jamais
+une certitude (un scan externe ne peut pas voir une version masquée, ni la version d'un décodeur
+Brotli).
 
 ## Démarrage rapide
 
