@@ -122,42 +122,31 @@ function Add-PhpVersionFinding {
   }
 }
 
-function Test-SafeExecutable {
-  # Un binaire trouvé par une recherche filesystem (hors PATH) n'est exécuté pour en lire la
-  # version QUE si ni lui ni aucun répertoire de sa chaîne n'est modifiable par un utilisateur
-  # non-administrateur -- sinon un utilisateur local sans droits pourrait déposer un faux
-  # php.exe que ce script (souvent lancé en administrateur) exécuterait pour lui.
+function Get-PhpVersionStatic {
+  # Lecture de version SANS exécution (certains builds PHP embarquent un numéro de version
+  # Win32 lisible via VersionInfo). C'est la SEULE méthode utilisée pour un binaire trouvé par
+  # une recherche sur disque (hors PATH) : un utilisateur local sans droits pourrait sinon
+  # déposer un faux php.exe que ce script (souvent lancé en administrateur) exécuterait pour
+  # lui. Une vérification de propriétaire/ACL avant exécution avait été envisagée puis écartée :
+  # elle compare des noms de principals localisés (ne fonctionne pas sur un Windows non anglais)
+  # et une liste de refus reste par nature incomplète -- plus sûr de ne jamais exécuter.
   param([string]$ExePath)
-  try {
-    $unsafe = @('Everyone', 'BUILTIN\Users', 'NT AUTHORITY\Authenticated Users', 'ANONYMOUS LOGON')
-    $cur = $ExePath
-    while ($cur -and (Test-Path -LiteralPath $cur)) {
-      $acl = Get-Acl -LiteralPath $cur -ErrorAction Stop
-      foreach ($ace in $acl.Access) {
-        if ($ace.AccessControlType -eq 'Allow' -and ($ace.FileSystemRights -match 'Write|Modify|FullControl|CreateFiles')) {
-          $idv = $ace.IdentityReference.Value
-          if ($unsafe -contains $idv -or $idv -match '\\Users$' -or $idv -match 'Authenticated Users') { return $false }
-        }
-      }
-      $parent = Split-Path -LiteralPath $cur -Parent
-      if (-not $parent -or $parent -eq $cur) { break }
-      $cur = $parent
-    }
-    return $true
-  } catch {
-    return $false
-  }
-}
-
-function Get-PhpVersionFromExe {
-  param([string]$ExePath)
-  # 1) tentative statique, sans exécution (certains builds embarquent un numéro de version Win32).
   try {
     $fv = (Get-Item -LiteralPath $ExePath -ErrorAction Stop).VersionInfo
     if ($fv.ProductVersion -and $fv.ProductVersion -match '^\d+\.\d+\.\d+') { return $fv.ProductVersion.Trim() }
     if ($fv.FileVersion -and $fv.FileVersion -match '^\d+\.\d+\.\d+') { return $fv.FileVersion.Trim() }
   } catch {}
-  # 2) sinon, exécution -- l'appelant doit avoir vérifié Test-SafeExecutable au préalable.
+  return $null
+}
+
+function Get-PhpVersionFromExe {
+  # Lecture statique, puis EXÉCUTION en dernier recours -- réservé au php.exe résolu depuis le
+  # PATH de l'opérateur (même frontière de confiance que docker.exe/node.exe/dotnet.exe ailleurs
+  # dans ce script). Ne JAMAIS appeler cette fonction sur un binaire trouvé par une recherche
+  # sur disque : utiliser Get-PhpVersionStatic à la place (voir sections 2 et 3 ci-dessous).
+  param([string]$ExePath)
+  $static = Get-PhpVersionStatic $ExePath
+  if ($static) { return $static }
   try {
     $v = & $ExePath -r "echo PHP_VERSION;" 2>$null
     if ($v -match '^\d+\.\d+\.\d+') { return $v.Trim() }
@@ -193,13 +182,9 @@ if (-not $Fast) {
   if ($phpBins) {
     foreach ($b in $phpBins) {
       Write-Host "  $($b.FullName)"
-      if (-not (Test-SafeExecutable $b.FullName)) {
-        Add-Finding UNKNOWN "$($b.FullName) — répertoire ou fichier modifiable par un utilisateur non-administrateur, non exécuté automatiquement : vérifier manuellement (propriétaire, droits, intégrité) avant toute exécution."
-        continue
-      }
-      $v = Get-PhpVersionFromExe $b.FullName
+      $v = Get-PhpVersionStatic $b.FullName
       if ($v) { Add-PhpVersionFinding $v $b.FullName }
-      else { Add-Finding UNKNOWN "$($b.FullName) : version indéterminée (binaire présent mais non exécutable depuis ce contexte ?)" }
+      else { Add-Finding UNKNOWN "$($b.FullName) : version illisible statiquement (le binaire n'embarque pas de ressource de version Win32 exploitable) ; non exécuté par sécurité — vérifier manuellement, par ex. en exécutant '& `"$($b.FullName)`" -v' depuis une session de confiance." }
     }
   } else {
     Write-Host "  Aucun php.exe/php-cgi.exe trouvé sous : $($Path -join ', ')"
@@ -221,13 +206,9 @@ if ($hasIisConfig) {
         if ($fp -match 'php-cgi\.exe$|php\.exe$') {
           Write-Host "  FastCGI -> $fp (arguments : $($app.arguments))"
           if (Test-Path $fp) {
-            if (-not (Test-SafeExecutable $fp)) {
-              Add-Finding UNKNOWN "IIS FastCGI : $fp — répertoire ou fichier modifiable par un utilisateur non-administrateur, non exécuté automatiquement : vérifier manuellement avant toute exécution."
-            } else {
-              $v = Get-PhpVersionFromExe $fp
-              if ($v) { Add-PhpVersionFinding $v "IIS FastCGI : $fp" }
-              else { Add-Finding UNKNOWN "IIS FastCGI : $fp — version indéterminée" }
-            }
+            $v = Get-PhpVersionStatic $fp
+            if ($v) { Add-PhpVersionFinding $v "IIS FastCGI : $fp" }
+            else { Add-Finding UNKNOWN "IIS FastCGI : $fp — version illisible statiquement ; non exécuté par sécurité — vérifier manuellement." }
           } else {
             Add-Finding UNKNOWN "IIS FastCGI référence $fp mais ce fichier n'existe pas (configuration obsolète ?)"
           }
