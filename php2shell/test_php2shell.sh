@@ -133,15 +133,23 @@ true'
 # probe_target <runtime> <exec|run> <cible> <libellé> : sonde un conteneur (exec, toujours) ou
 # une image (run jetable --network none, UNIQUEMENT si --scan-images a été passé par l'appelant)
 probe_target() {
-  local rt="$1" mode="$2" tgt="$3" label="$4" out ver bins
+  local rt="$1" mode="$2" tgt="$3" label="$4" out ver bins rc
   if [[ "$mode" == exec ]]; then
-    out=$(run_probe 20 "$rt" exec "$tgt" sh -c "$PROBE")
+    out=$(run_probe 20 "$rt" exec "$tgt" sh -c "$PROBE"); rc=$?
   else
-    out=$(run_probe 40 "$rt" run --rm --network none --entrypoint sh "$tgt" -c "$PROBE")
+    out=$(run_probe 40 "$rt" run --rm --network none --entrypoint sh "$tgt" -c "$PROBE"); rc=$?
   fi
   bins=$(printf '%s\n' "$out" | awk '$1=="BIN"{print $2}' | sort -u | tr '\n' ' ')
   ver=$(printf '%s\n' "$out" | awk '$1=="VER"{print $2; exit}')
-  [[ -z "$bins" && -z "$ver" ]] && return 0
+  if [[ -z "$bins" && -z "$ver" ]]; then
+    # Sortie vide/sans intérêt ET code retour non nul = la sonde n'a pas pu s'exécuter (pas de
+    # shell dans l'image, conteneur arrêté entre-temps, délai dépassé...) : ce n'est PAS une
+    # preuve d'absence de PHP, donc "à vérifier", pas un silence qui ferait croire à "non concerné".
+    if [[ "$rc" -ne 0 ]]; then
+      UNK_COUNT=$((UNK_COUNT+1)); FINDINGS+=("[À VÉRIFIER]  $label : sonde impossible (exec/run a échoué ou expiré, code retour $rc — pas de shell, conteneur arrêté, ou délai dépassé) — vérifier manuellement.")
+    fi
+    return 0
+  fi
   echo "  $label : binaires=[${bins% }] version=${ver:-?}"
   if [[ -n "$ver" ]]; then verdict_version "$ver" "$label"
   else UNK_COUNT=$((UNK_COUNT+1)); FINDINGS+=("[À VÉRIFIER]  $label : PHP présent, version indéterminée"); fi

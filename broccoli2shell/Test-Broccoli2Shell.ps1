@@ -156,8 +156,14 @@ if (-not $Fast) {
     foreach ($f in $cfgFiles) {
       try {
         $json = Get-Content $f.FullName -Raw | ConvertFrom-Json
+        # Un déploiement self-contained "classique" porte .framework ou .frameworks ; un
+        # déploiement entièrement autonome/trimmé (dotnet publish --self-contained) porte
+        # plutôt .includedFrameworks, avec la même forme {name, version} -- les trois sont
+        # tentés, et toute structure non reconnue remonte "à vérifier" au lieu d'être
+        # silencieusement ignorée (un fichier ignoré ne prouve rien).
         $fw = $json.runtimeOptions.framework
         if (-not $fw) { $fw = $json.runtimeOptions.frameworks | Select-Object -First 1 }
+        if (-not $fw) { $fw = $json.runtimeOptions.includedFrameworks | Select-Object -First 1 }
         if ($fw) {
           $name = $fw.name; $ver = $fw.version
           Write-Host "  $($f.FullName) -> $name $ver"
@@ -169,8 +175,10 @@ if (-not $Fast) {
           } else {
             Add-Finding UNKNOWN "self-contained $($f.FullName) : $name $ver — vérifier manuellement."
           }
+        } else {
+          Add-Finding UNKNOWN "self-contained $($f.FullName) : structure runtimeconfig.json non reconnue (ni framework, ni frameworks, ni includedFrameworks) — vérifier manuellement."
         }
-      } catch { Write-Host "  $($f.FullName) -> illisible" }
+      } catch { Add-Finding UNKNOWN "self-contained $($f.FullName) : fichier illisible ou JSON invalide — vérifier manuellement." }
     }
   } else {
     Write-Host "  Aucun *.runtimeconfig.json trouvé sous : $($Path -join ', ')"
@@ -264,8 +272,13 @@ if [ -r /etc/os-release ]; then . /etc/os-release; echo "OSREL ${ID:-} ${VERSION
 dpkg -l 2>/dev/null | awk "tolower(\$0) ~ /brotli/ {print \"PKGDPKG\",\$2,\$3}"
 rpm -qa --qf "PKGRPM %{NAME} %{VERSION}-%{RELEASE}\n" 2>/dev/null | grep -i brotli
 apk info -vv 2>/dev/null | awk "\$1 ~ /^brotli-libs-/ {n=\$1; sub(/^brotli-libs-/,\"\",n); print \"PKGAPK brotli-libs\",n}"
+for di in $(find / -xdev -iname "*.dist-info" -ipath "*brotli*" -not -path "/proc/*" 2>/dev/null); do
+  v=$(grep -m1 "^Version:" "$di/METADATA" 2>/dev/null | awk "{print \$2}")
+  echo "PYPKG $di $v"
+done
 command -v node >/dev/null 2>&1 && echo "NODE $(node -v 2>/dev/null)"
 command -v dotnet >/dev/null 2>&1 && dotnet --list-runtimes 2>/dev/null | sed "s/^/DOTNET /"
+for b in duckdb 7z 7za 7zr p7zip woff2; do command -v $b >/dev/null 2>&1 && echo "EMBED $b"; done
 true
 '@
 
@@ -274,7 +287,13 @@ if ($dockerExe) {
   Write-Host "-- conteneurs EN COURS (exec, lecture seule) --"
   foreach ($c in $containers) {
     $out = & $dockerExe.Source exec $c sh -c $probe 2>$null
-    if (-not $out) { continue }
+    $rc = $LASTEXITCODE
+    if (-not $out) {
+      # Sortie vide ET code retour non nul = la sonde n'a pas pu s'exécuter (pas de shell dans
+      # l'image, conteneur arrêté entre-temps...) : pas une preuve d'absence de Brotli.
+      if ($rc -ne 0) { Add-Finding UNKNOWN "conteneur $c : sonde impossible (docker exec a échoué, code retour $rc — pas de shell ou conteneur arrêté) — vérifier manuellement." }
+      continue
+    }
     Write-Host "  -- conteneur $c --"
     $out | ForEach-Object { Write-Host "    $_" }
     $cid = ($out | Where-Object { $_ -match '^OSREL' } | ForEach-Object { ($_ -split '\s+')[1] }) -join ''
@@ -285,6 +304,8 @@ if ($dockerExe) {
       elseif ($line -match '^PKGDPKG\s+(\S+)\s+(\S+)') { Add-Finding UNKNOWN "conteneur $c : paquet $($Matches[1]) $($Matches[2]) (distro $cid $cver) — comparer à security-tracker.debian.org / ubuntu.com/security/notices pour cette distribution+version" }
       elseif ($line -match '^PKGAPK\s+(\S+)\s+(\S+)') { Add-Finding UNKNOWN "conteneur $c : $($Matches[1]) $($Matches[2]) (alpine $cver) — comparer à security.alpinelinux.org" }
       elseif ($line -match '^PKGRPM\s+(\S+)\s+(\S+)') { Add-Finding UNKNOWN "conteneur $c : paquet $($Matches[1]) $($Matches[2]) (rpm) — vérifier l'avis Red Hat/Fedora manuellement" }
+      elseif ($line -match '^PYPKG\s+(\S+)\s+(\S*)') { if ($Matches[2]) { Add-Finding UNKNOWN "conteneur $c : Python $(Split-Path $Matches[1] -Leaf) $($Matches[2]) — comparer à Brotli>=$PyBrotliFixed / brotlicffi>=$PyBrotliCffiFixed" } }
+      elseif ($line -match '^EMBED\s+(\S+)') { Add-Finding UNKNOWN "conteneur $c : binaire embarquant potentiellement sa propre copie de Brotli ($($Matches[1])) — vérifier l'éditeur" }
     }
   }
   if ($ScanImages) {
@@ -292,7 +313,11 @@ if ($dockerExe) {
     $images = & $dockerExe.Source images --format '{{.Repository}}:{{.Tag}}' 2>$null | Where-Object { $_ -notmatch '<none>' } | Sort-Object -Unique
     foreach ($img in $images) {
       $out = & $dockerExe.Source run --rm --network none --entrypoint sh $img -c $probe 2>$null
-      if (-not $out) { continue }
+      $rc = $LASTEXITCODE
+      if (-not $out) {
+        if ($rc -ne 0) { Add-Finding UNKNOWN "image $img : sonde impossible (docker run a échoué ou expiré, code retour $rc — pas de shell dans l'image) — vérifier manuellement." }
+        continue
+      }
       Write-Host "  -- image $img --"
       $out | ForEach-Object { Write-Host "    $_" }
       foreach ($line in $out) {
@@ -301,6 +326,8 @@ if ($dockerExe) {
         elseif ($line -match '^PKGDPKG\s+(\S+)\s+(\S+)') { Add-Finding UNKNOWN "image $img : paquet $($Matches[1]) $($Matches[2]) — comparer à la distribution correspondante" }
         elseif ($line -match '^PKGAPK\s+(\S+)\s+(\S+)') { Add-Finding UNKNOWN "image $img : $($Matches[1]) $($Matches[2]) (alpine) — comparer à security.alpinelinux.org" }
         elseif ($line -match '^PKGRPM\s+(\S+)\s+(\S+)') { Add-Finding UNKNOWN "image $img : paquet $($Matches[1]) $($Matches[2]) (rpm) — vérifier manuellement" }
+        elseif ($line -match '^PYPKG\s+(\S+)\s+(\S*)') { if ($Matches[2]) { Add-Finding UNKNOWN "image $img : Python $(Split-Path $Matches[1] -Leaf) $($Matches[2]) — comparer à Brotli>=$PyBrotliFixed / brotlicffi>=$PyBrotliCffiFixed" } }
+        elseif ($line -match '^EMBED\s+(\S+)') { Add-Finding UNKNOWN "image $img : binaire embarquant potentiellement sa propre copie de Brotli ($($Matches[1])) — vérifier l'éditeur" }
       }
     }
   } else {

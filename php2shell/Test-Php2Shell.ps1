@@ -122,8 +122,42 @@ function Add-PhpVersionFinding {
   }
 }
 
+function Test-SafeExecutable {
+  # Un binaire trouvé par une recherche filesystem (hors PATH) n'est exécuté pour en lire la
+  # version QUE si ni lui ni aucun répertoire de sa chaîne n'est modifiable par un utilisateur
+  # non-administrateur -- sinon un utilisateur local sans droits pourrait déposer un faux
+  # php.exe que ce script (souvent lancé en administrateur) exécuterait pour lui.
+  param([string]$ExePath)
+  try {
+    $unsafe = @('Everyone', 'BUILTIN\Users', 'NT AUTHORITY\Authenticated Users', 'ANONYMOUS LOGON')
+    $cur = $ExePath
+    while ($cur -and (Test-Path -LiteralPath $cur)) {
+      $acl = Get-Acl -LiteralPath $cur -ErrorAction Stop
+      foreach ($ace in $acl.Access) {
+        if ($ace.AccessControlType -eq 'Allow' -and ($ace.FileSystemRights -match 'Write|Modify|FullControl|CreateFiles')) {
+          $idv = $ace.IdentityReference.Value
+          if ($unsafe -contains $idv -or $idv -match '\\Users$' -or $idv -match 'Authenticated Users') { return $false }
+        }
+      }
+      $parent = Split-Path -LiteralPath $cur -Parent
+      if (-not $parent -or $parent -eq $cur) { break }
+      $cur = $parent
+    }
+    return $true
+  } catch {
+    return $false
+  }
+}
+
 function Get-PhpVersionFromExe {
   param([string]$ExePath)
+  # 1) tentative statique, sans exécution (certains builds embarquent un numéro de version Win32).
+  try {
+    $fv = (Get-Item -LiteralPath $ExePath -ErrorAction Stop).VersionInfo
+    if ($fv.ProductVersion -and $fv.ProductVersion -match '^\d+\.\d+\.\d+') { return $fv.ProductVersion.Trim() }
+    if ($fv.FileVersion -and $fv.FileVersion -match '^\d+\.\d+\.\d+') { return $fv.FileVersion.Trim() }
+  } catch {}
+  # 2) sinon, exécution -- l'appelant doit avoir vérifié Test-SafeExecutable au préalable.
   try {
     $v = & $ExePath -r "echo PHP_VERSION;" 2>$null
     if ($v -match '^\d+\.\d+\.\d+') { return $v.Trim() }
@@ -159,6 +193,10 @@ if (-not $Fast) {
   if ($phpBins) {
     foreach ($b in $phpBins) {
       Write-Host "  $($b.FullName)"
+      if (-not (Test-SafeExecutable $b.FullName)) {
+        Add-Finding UNKNOWN "$($b.FullName) — répertoire ou fichier modifiable par un utilisateur non-administrateur, non exécuté automatiquement : vérifier manuellement (propriétaire, droits, intégrité) avant toute exécution."
+        continue
+      }
       $v = Get-PhpVersionFromExe $b.FullName
       if ($v) { Add-PhpVersionFinding $v $b.FullName }
       else { Add-Finding UNKNOWN "$($b.FullName) : version indéterminée (binaire présent mais non exécutable depuis ce contexte ?)" }
@@ -183,9 +221,13 @@ if ($hasIisConfig) {
         if ($fp -match 'php-cgi\.exe$|php\.exe$') {
           Write-Host "  FastCGI -> $fp (arguments : $($app.arguments))"
           if (Test-Path $fp) {
-            $v = Get-PhpVersionFromExe $fp
-            if ($v) { Add-PhpVersionFinding $v "IIS FastCGI : $fp" }
-            else { Add-Finding UNKNOWN "IIS FastCGI : $fp — version indéterminée" }
+            if (-not (Test-SafeExecutable $fp)) {
+              Add-Finding UNKNOWN "IIS FastCGI : $fp — répertoire ou fichier modifiable par un utilisateur non-administrateur, non exécuté automatiquement : vérifier manuellement avant toute exécution."
+            } else {
+              $v = Get-PhpVersionFromExe $fp
+              if ($v) { Add-PhpVersionFinding $v "IIS FastCGI : $fp" }
+              else { Add-Finding UNKNOWN "IIS FastCGI : $fp — version indéterminée" }
+            }
           } else {
             Add-Finding UNKNOWN "IIS FastCGI référence $fp mais ce fichier n'existe pas (configuration obsolète ?)"
           }
@@ -229,7 +271,13 @@ if ($dockerExe) {
   Write-Host "-- conteneurs EN COURS (exec, lecture seule) --"
   foreach ($c in $containers) {
     $out = & $dockerExe.Source exec $c sh -c $probe 2>$null
-    if (-not $out) { continue }
+    $rc = $LASTEXITCODE
+    if (-not $out) {
+      # Sortie vide ET code retour non nul = la sonde n'a pas pu s'exécuter (pas de shell dans
+      # l'image, conteneur arrêté entre-temps...) : pas une preuve d'absence de PHP.
+      if ($rc -ne 0) { Add-Finding UNKNOWN "conteneur $c : sonde impossible (docker exec a échoué, code retour $rc — pas de shell ou conteneur arrêté) — vérifier manuellement." }
+      continue
+    }
     $bins = ($out | Where-Object { $_ -match '^BIN ' } | ForEach-Object { ($_ -split ' ', 2)[1] }) -join ' '
     $ver  = ($out | Where-Object { $_ -match '^VER ' } | Select-Object -First 1 | ForEach-Object { ($_ -split ' ', 2)[1] })
     if (-not $bins -and -not $ver) { continue }
@@ -242,7 +290,11 @@ if ($dockerExe) {
     $images = & $dockerExe.Source images --format '{{.Repository}}:{{.Tag}}' 2>$null | Where-Object { $_ -notmatch '<none>' } | Sort-Object -Unique
     foreach ($img in $images) {
       $out = & $dockerExe.Source run --rm --network none --entrypoint sh $img -c $probe 2>$null
-      if (-not $out) { continue }
+      $rc = $LASTEXITCODE
+      if (-not $out) {
+        if ($rc -ne 0) { Add-Finding UNKNOWN "image $img : sonde impossible (docker run a échoué ou expiré, code retour $rc — pas de shell dans l'image) — vérifier manuellement." }
+        continue
+      }
       $bins = ($out | Where-Object { $_ -match '^BIN ' } | ForEach-Object { ($_ -split ' ', 2)[1] }) -join ' '
       $ver  = ($out | Where-Object { $_ -match '^VER ' } | Select-Object -First 1 | ForEach-Object { ($_ -split ' ', 2)[1] })
       if (-not $bins -and -not $ver) { continue }

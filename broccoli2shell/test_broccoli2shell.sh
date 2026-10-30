@@ -107,6 +107,24 @@ run()       { if [[ "$HAVE_TIMEOUT" -eq 1 ]]; then timeout 8 "$@" 2>&1 || true; 
 run_t()     { local t="$1"; shift; if [[ "$HAVE_TIMEOUT" -eq 1 ]]; then timeout "$t" "$@" 2>/dev/null; else "$@" 2>/dev/null; fi; }
 run_probe() { local t="$1"; shift; if [[ "$HAVE_TIMEOUT" -eq 1 ]]; then timeout "$t" "$@" 2>/dev/null; else "$@" 2>/dev/null; fi; }
 
+# is_safe_exec <path> : un binaire trouvé par une recherche filesystem (hors PATH) n'est exécuté
+# pour en lire la version QUE s'il appartient à root et si aucun répertoire de sa chaîne n'est
+# inscriptible par un utilisateur non privilégié -- sinon un utilisateur local sans droits
+# pourrait déposer un faux binaire que ce script (souvent lancé en root) exécuterait pour lui.
+is_safe_exec() {
+  local f="$1" cur owner perm
+  command -v stat >/dev/null 2>&1 || return 1
+  cur="$f"
+  while [[ -n "$cur" && "$cur" != "/" ]]; do
+    owner=$(stat -c '%u' "$cur" 2>/dev/null) || return 1
+    [[ "$owner" == "0" ]] || return 1
+    perm=$(stat -c '%a' "$cur" 2>/dev/null) || return 1
+    [[ "${perm: -1}" =~ [2367] ]] && return 1   # bit "écriture pour tous" posé
+    cur="$(dirname "$cur")"
+  done
+  return 0
+}
+
 VULN_COUNT=0; OK_COUNT=0; UNK_COUNT=0
 FINDINGS=()
 add_finding() { # <verdict: VULNERABLE|OK|UNKNOWN> <ligne texte>
@@ -236,6 +254,14 @@ echo "Rappel : si la mise à jour est impossible, désinstaller Brotli/brotlicff
 section "3. Node.js (hôte)"
 if [[ "$HAVE_NODE" -eq 1 || "$HAVE_FIND" -eq 1 ]]; then
   while IFS= read -r nodebin; do
+    [[ -z "$nodebin" ]] && continue
+    # command -v node (PATH) est toujours exécuté ; un binaire trouvé par find hors PATH n'est
+    # exécuté que s'il réussit le contrôle is_safe_exec (appartenance root + chaîne non writable).
+    if [[ "$nodebin" != "$(command -v node 2>/dev/null)" ]] && ! is_safe_exec "$nodebin"; then
+      echo "  $nodebin -> non exécuté (hors PATH, appartenance/droits non sûrs : root ne l'exécute pas automatiquement)"
+      add_finding UNKNOWN "Node.js $nodebin — binaire trouvé hors PATH dans un emplacement potentiellement inscriptible par un utilisateur non privilégié, non exécuté automatiquement : vérifier manuellement (propriétaire, droits, intégrité) avant toute exécution."
+      continue
+    fi
     v=$("$nodebin" -v 2>/dev/null | sed 's/^v//')
     [[ -z "$v" ]] && continue
     echo "  $nodebin -> v$v"
@@ -320,10 +346,16 @@ for b in duckdb 7z 7za 7zr p7zip woff2; do command -v $b >/dev/null 2>&1 && echo
 true'
 
 probe_container() { # <runtime> <exec|run> <cible> <libellé>
-  local rt="$1" mode="$2" tgt="$3" label="$4" out c_id c_ver kind a b fixed
-  if [[ "$mode" == exec ]]; then out=$(run_probe 25 "$rt" exec "$tgt" sh -c "$PROBE")
-  else out=$(run_probe 45 "$rt" run --rm --network none --entrypoint sh "$tgt" -c "$PROBE"); fi
-  [[ -z "$out" ]] && return 0
+  local rt="$1" mode="$2" tgt="$3" label="$4" out rc c_id c_ver kind a b fixed
+  if [[ "$mode" == exec ]]; then out=$(run_probe 25 "$rt" exec "$tgt" sh -c "$PROBE"); rc=$?
+  else out=$(run_probe 45 "$rt" run --rm --network none --entrypoint sh "$tgt" -c "$PROBE"); rc=$?; fi
+  if [[ -z "$out" ]]; then
+    # Sortie vide ET code retour non nul = la sonde n'a pas pu s'exécuter (pas de shell dans
+    # l'image, conteneur arrêté entre-temps, délai dépassé...) : ce n'est PAS une preuve
+    # d'absence de Brotli, donc "à vérifier", pas un silence qui ferait croire à "rien trouvé".
+    [[ "$rc" -ne 0 ]] && add_finding UNKNOWN "$label : sonde impossible (exec/run a échoué ou expiré, code retour $rc — pas de shell, conteneur arrêté, ou délai dépassé) — vérifier manuellement."
+    return 0
+  fi
   echo "  -- $label --"
   printf '%s\n' "$out" | sed 's/^/    /'
   grep -qE '^(PKGDPKG|PKGAPK|PKGRPM|PYPKG|NODE|DOTNET|EMBED) ' <<< "$out" || return 0
