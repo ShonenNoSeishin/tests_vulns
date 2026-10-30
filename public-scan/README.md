@@ -86,6 +86,8 @@ public" qui a motivé ce dossier) :
 # ips.txt : une IP ou un domaine par ligne
 nmap -sV -p 80,443,8080,8443 --script=http-server-header,http-php-version -iL ips.txt -oN resultats.txt
 ```
+(`scan_public.sh` plus bas fait ça automatiquement, pour les trois commandes, et accepte aussi
+directement des URLs complètes dans le fichier — voir section 3.)
 
 ## 3. Script tout-en-un
 
@@ -99,10 +101,29 @@ Il enchaîne les trois commandes ci-dessus et termine par un rappel explicite de
 **n'affiche jamais** de ligne "Confiance : COMPLÈTE" comme les scripts des deux autres dossiers :
 un scan réseau externe ne peut structurellement pas l'atteindre.
 
+**Une liste de cibles au lieu d'une seule** : passer un fichier texte à la place d'un hôte unique
+(une URL, IP ou nom d'hôte par ligne — comme pour `nmap -iL`, repris tel quel) :
+```bash
+./scan_public.sh ips.txt
+./scan_public.sh ips.txt 80,443,8080
+```
+```
+# ips.txt — une cible par ligne, les lignes vides et les commentaires (#) sont ignorés
+https://exemple.com/un/chemin/quelconque
+203.0.113.42
+sous-domaine.exemple.com:8443
+```
+Le script retire automatiquement le schéma `http(s)://`, le chemin/la query et un éventuel port
+en fin de ligne (nmap attend un hôte/IP nu, pas une URL complète) avant de transmettre la liste
+assainie à `nmap -iL`. Le résultat complet est alors aussi enregistré dans un fichier
+`scan_public_<date>.log` (en plus d'être affiché), pour relire plus tard un scan portant sur
+plusieurs cibles.
+
 > Testé contre `scanme.nmap.org` (la cible publique d'essai officielle de nmap, explicitement
-> ouverte à cet usage) : les trois sections s'exécutent correctement, sans version PHP ni Brotli
-> détectés sur cette cible (attendu, elle ne sert ni l'un ni l'autre). Pour un test inoffensif
-> avant de l'utiliser sur votre propre périmètre : `./scan_public.sh scanme.nmap.org`.
+> ouverte à cet usage), en cible unique et via un fichier (URL complète + IP mélangées) : les
+> trois sections s'exécutent correctement, sans version PHP ni Brotli détectés sur cette cible
+> (attendu, elle ne sert ni l'un ni l'autre). Pour un test inoffensif avant de l'utiliser sur
+> votre propre périmètre : `./scan_public.sh scanme.nmap.org`.
 
 ## Références
 
