@@ -19,7 +19,24 @@ CVE-2026-109619 est liée au traitement de `session.upload_progress` : une mitig
 | 8.2 | **8.2.35** |
 | ≤ 8.1 (7.x, 5.x…) | Fin de vie : **pas de correctif officiel** (seulement des backports source minimaux pour 7.4 → 8.1). À migrer ou isoler. |
 
-> ⚠️ **Piège Debian/Ubuntu/RHEL** : les correctifs y sont souvent **rétroportés** : un numéro de version inférieur à celui ci-dessus peut déjà être patché par la distribution. Le script compare d'abord la version PHP elle-même (fiable pour un PHP installé via les sources officielles ou une image Docker upstream) ; pour un PHP fourni par le paquet système d'une distribution, vérifier aussi le tracker de sécurité de cette distribution (<https://security-tracker.debian.org/>, <https://ubuntu.com/security/notices/>).
+> ⚠️ **Piège Debian/Ubuntu** : les correctifs y sont **rétroportés dans le paquet** sans changer le numéro `PHP_VERSION` rendu par le binaire. Exemple réel : Ubuntu 22.04 reste en PHP **8.1.2** (branche amont EOL) après le correctif — seul le paquet `php8.1-*` change de version (`8.1.2-1ubuntu2.28`). Comparer uniquement le numéro PHP donnerait un **faux positif** sur un système déjà patché.
+>
+> Le script (bash) gère ça automatiquement pour les combinaisons distribution/version/branche déjà vérifiées (voir tableau ci-dessous) : il interroge le paquet système réel (`dpkg -l`) et compare sa version à celle corrigée par Debian/Ubuntu, pas au numéro amont. Pour toute combinaison **non** dans ce tableau (autre version d'Ubuntu/Debian, ou RHEL/CentOS/Fedora), il reste prudent et renvoie `[À VÉRIFIER]` plutôt que d'affirmer "vulnérable" sur la seule foi du numéro amont — à confirmer manuellement sur le tracker de sécurité de la distribution.
+
+| Distribution | Branche PHP | Paquet corrigé | Remarque |
+|---|---|---|---|
+| Debian 12 (bookworm) | 8.2 | `php8.2-*` **8.2.35-1~deb12u1** | |
+| Debian 13 (trixie) | 8.4 | `php8.4-*` **8.4.27-1~deb13u1** | |
+| Ubuntu 22.04 LTS | 8.1 | `php8.1-*` **8.1.2-1ubuntu2.28** | |
+| Ubuntu 24.04 LTS | 8.3 | `php8.3-*` **8.3.6-0ubuntu0.24.04.13** | |
+| Ubuntu 26.04 LTS | 8.5 | `php8.5-*` **8.5.4-0ubuntu1.5** | |
+| Ubuntu 26.10 | 8.5 | `php8.5-*` **8.5.9-0ubuntu2.1** | |
+| Ubuntu 20.04 LTS | 7.4 | `php7.4-*` **7.4.3-4ubuntu2.29+esm5** | **Ubuntu Pro/ESM requis** pour recevoir ce paquet |
+| Ubuntu 18.04 LTS | 7.2 | `php7.2-*` **7.2.24-0ubuntu0.18.04.17+esm14** | **Ubuntu Pro/ESM requis** |
+| Ubuntu 16.04 LTS | 7.0 | `php7.0-*` **7.0.33-0ubuntu0.16.04.16+esm22** | **Ubuntu Pro (Legacy Support) requis** |
+| Ubuntu 14.04 LTS | 5.5 | `php5-*` **5.5.9+dfsg-1ubuntu4.29+esm18** | **Ubuntu Pro (Legacy Support) requis** |
+
+Sources : [security-tracker.debian.org/tracker/CVE-2026-109618](https://security-tracker.debian.org/tracker/CVE-2026-109618), [USN-8948-1](https://ubuntu.com/security/notices/USN-8948-1), [USN-8948-2](https://ubuntu.com/security/notices/USN-8948-2) — vérifiées le 30/10/2026.
 
 **Mitigation temporaire** (CVE-2026-109619) : `session.upload_progress.enabled = 0` dans le `php.ini`, puis **redémarrer tous les workers** (php-fpm / apache / IIS). Seule la mise à jour protège complètement.
 
@@ -75,7 +92,9 @@ Le code de sortie du script suit la même logique : `0` = rien à signaler, `1` 
 ## Limites connues
 
 - Ce script est un inventaire de versions, pas un test d'intrusion : il ne prouve pas l'absence de compromission passée.
-- Paquets Debian/Ubuntu/RHEL : un numéro de version inférieur au correctif amont peut déjà être patché par la distribution (backport) — à vérifier sur le tracker de sécurité de la distribution en cas de doute.
+- La vérification par paquet distro (bash uniquement) ne couvre que les combinaisons Debian/Ubuntu listées dans le tableau ci-dessus. Pour toute autre version (Debian 11, Ubuntu non listé) ou pour RHEL/CentOS/Fedora, le script reste prudent et renvoie `[À VÉRIFIER]` plutôt que d'affirmer un verdict sur la seule foi du numéro amont — à vérifier manuellement sur le tracker de sécurité de la distribution.
+- `Test-Php2Shell.ps1` (Windows) ne fait pas cette vérification par paquet : il n'existe pas d'équivalent `dpkg`/APT sous Windows pour XAMPP/WAMP/IIS.
+- Snap est couvert (binaires PHP et applications web connues repérés dans `/snap` et `/var/snap`), mais un paquet Snap n'est pas concerné par le mécanisme de backport Debian/Ubuntu ci-dessus : son numéro de version est celui publié par l'éditeur du snap, comparé directement aux versions amont.
 - `kubectl`/`lxc`/`nerdctl`/`crictl` sont seulement signalés comme présents, pas sondés automatiquement.
 - Sous Windows : la recherche sur disque est bornée aux chemins fournis en paramètre (par défaut XAMPP/WAMP/PHP officiel/IIS) — une installation ailleurs reste invisible ; les conteneurs Windows natifs (non-WSL2) ne sont pas sondés.
 

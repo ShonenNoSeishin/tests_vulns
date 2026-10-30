@@ -65,6 +65,7 @@ HAVE_FIND=0;       have find       && HAVE_FIND=1
 HAVE_GREP=0;       have grep       && HAVE_GREP=1
 HAVE_PS=0;         have ps         && HAVE_PS=1
 HAVE_DPKGQ=0;      have dpkg-query && HAVE_DPKGQ=1
+HAVE_DPKG_CMD=0;   have dpkg       && HAVE_DPKG_CMD=1
 HAVE_RPM=0;        have rpm        && HAVE_RPM=1
 HAVE_APK=0;        have apk        && HAVE_APK=1
 HAVE_SYSTEMCTL=0;  have systemctl  && HAVE_SYSTEMCTL=1
@@ -79,6 +80,7 @@ report "bash"       "$([[ $BASH_OK -eq 1 ]] && echo "$BASH_VERSION (ok)" || echo
 report "timeout"    "$([[ $HAVE_TIMEOUT -eq 1 ]] && echo disponible || echo 'absent -> commandes longues non bornées en durée')"
 report "find"       "$([[ $HAVE_FIND -eq 1 ]] && echo disponible || echo 'absent -> recherche des binaires PHP hors PATH ignorée')"
 report "dpkg-query" "$([[ $HAVE_DPKGQ -eq 1 ]] && echo disponible || echo absent)"
+report "dpkg"       "$([[ $HAVE_DPKG_CMD -eq 1 ]] && echo disponible || echo 'absent -> comparaison de version de paquet Debian/Ubuntu ignorée')"
 report "rpm"        "$([[ $HAVE_RPM -eq 1 ]] && echo disponible || echo absent)"
 report "apk"        "$([[ $HAVE_APK -eq 1 ]] && echo disponible || echo absent)"
 report "systemctl"  "$([[ $HAVE_SYSTEMCTL -eq 1 ]] && echo disponible || echo 'absent -> section services ignorée')"
@@ -98,18 +100,85 @@ run()       { if [[ "$HAVE_TIMEOUT" -eq 1 ]]; then timeout 8 "$@" 2>&1 || true; 
 run_t()     { local t="$1"; shift; if [[ "$HAVE_TIMEOUT" -eq 1 ]]; then timeout "$t" "$@" 2>/dev/null; else "$@" 2>/dev/null; fi; }
 run_probe() { local t="$1"; shift; if [[ "$HAVE_TIMEOUT" -eq 1 ]]; then timeout "$t" "$@" 2>/dev/null; else "$@" 2>/dev/null; fi; }
 
-# PHP2Shell (CVE-2026-109618 / CVE-2026-109619) — versions corrigées par branche (21/10/2026)
+# PHP2Shell (CVE-2026-109618 / CVE-2026-109619) — versions amont corrigées par branche (21/10/2026)
 declare -A FIXED=( [8.2]=35 [8.3]=36 [8.4]=27 [8.5]=12 )
+
+# Debian/Ubuntu REBACKPORTENT ce correctif dans leur propre paquet SANS changer le numéro PHP_VERSION
+# rendu par le binaire (ex. Ubuntu 22.04 reste "8.1.2" après correctif) : comparer le numéro amont seul
+# donnerait un FAUX POSITIF sur un système déjà patché. Tables vérifiées via security-tracker.debian.org
+# (CVE-2026-109618) et ubuntu.com/security/notices (USN-8948-1 et -2), le 30/10/2026.
+declare -A DEB_PHP_FIXED=(
+  ["12:8.2"]="8.2.35-1~deb12u1"
+  ["13:8.4"]="8.4.27-1~deb13u1"
+)
+declare -A UBU_PHP_FIXED=(
+  ["22.04:8.1"]="8.1.2-1ubuntu2.28"
+  ["24.04:8.3"]="8.3.6-0ubuntu0.24.04.13"
+  ["26.04:8.5"]="8.5.4-0ubuntu1.5"
+  ["26.10:8.5"]="8.5.9-0ubuntu2.1"
+  ["20.04:7.4"]="7.4.3-4ubuntu2.29+esm5"
+  ["18.04:7.2"]="7.2.24-0ubuntu0.18.04.17+esm14"
+  ["16.04:7.0"]="7.0.33-0ubuntu0.16.04.16+esm22"
+  ["14.04:5.5"]="5.5.9+dfsg-1ubuntu4.29+esm18"
+)
+
 VULN_COUNT=0; OK_COUNT=0; UNK_COUNT=0
 FINDINGS=()
 
-# verdict_version <version> <contexte> : classe une version PHP et alimente le résumé
+# php_pkg_fixed_version <distro_id> <distro_ver> <branche> : écrit la version de paquet corrigée
+# connue pour cette distribution+version+branche PHP, ou rien si non référencée ici.
+php_pkg_fixed_version() {
+  local id="$1" ver="$2" br="$3"
+  case "$id" in
+    debian) printf '%s' "${DEB_PHP_FIXED["$ver:$br"]:-}" ;;
+    ubuntu) printf '%s' "${UBU_PHP_FIXED["$ver:$br"]:-}" ;;
+  esac
+}
+
+# php_distro_verdict <contexte> <nom paquet> <version installée> <version corrigée> : compare un
+# paquet PHP système déjà localisé (hôte ou conteneur) et alimente le résumé.
+php_distro_verdict() {
+  local ctx="$1" pkgname="$2" instver="$3" fixedver="$4" note=""
+  [[ "$fixedver" == *esm* ]] && note=" — nécessite un abonnement Ubuntu Pro/ESM actif pour recevoir ce correctif, sinon il n'est pas installable"
+  if dpkg --compare-versions "$instver" lt "$fixedver"; then
+    VULN_COUNT=$((VULN_COUNT+1)); FINDINGS+=("[VULNÉRABLE]  $ctx : paquet $pkgname $instver < $fixedver (correctif disponible$note)")
+  else
+    OK_COUNT=$((OK_COUNT+1)); FINDINGS+=("[CORRIGÉ]     $ctx : paquet $pkgname $instver >= $fixedver")
+  fi
+}
+
+# verdict_version <version> <contexte> [distro_id] [distro_ver] [paquet connu] [version paquet connue]
+# Sans distro_id/distro_ver (cas de l'hôte), ils sont pris sur /etc/os-release de l'hôte et une
+# recherche dpkg-query locale est tentée. Avec distro_id/distro_ver fournis (cas d'un conteneur),
+# AUCUNE recherche dpkg locale n'est faite : seul le paquet/version déjà repéré DANS le conteneur
+# par la sonde (passé en 5e/6e argument) est utilisé — interroger dpkg de l'hôte donnerait une
+# comparaison fausse puisque le paquet appartient au conteneur, pas à l'hôte.
 verdict_version() {
-  local v="${1%%[-+~]*}" ctx="$2" br patch fx
+  local v="${1%%[-+~]*}" ctx="$2" d_id="${3-}" d_ver="${4-}" pkgname="${5-}" pkgver="${6-}"
+  local br patch fx fixedpkg lookupname is_host=0
+  if [[ -z "${3+x}" && -z "${4+x}" ]]; then d_id="${ID:-}"; d_ver="${VERSION_ID:-}"; is_host=1; fi
+
   if [[ ! "$v" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
     UNK_COUNT=$((UNK_COUNT+1)); FINDINGS+=("[À VÉRIFIER]  $ctx : version illisible ($1)"); return
   fi
   br="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}"; patch="${BASH_REMATCH[3]}"
+
+  if [[ "$d_id" == debian || "$d_id" == ubuntu ]] && [[ "$HAVE_DPKG_CMD" -eq 1 ]]; then
+    fixedpkg=$(php_pkg_fixed_version "$d_id" "$d_ver" "$br")
+    if [[ -n "$fixedpkg" ]]; then
+      if [[ -z "$pkgname" && "$is_host" -eq 1 && "$HAVE_DPKGQ" -eq 1 ]]; then
+        for lookupname in "php${br}-common" "php${br}-cli" "php${br}-fpm" "php${br}-cgi"; do
+          pkgver=$(dpkg-query -W -f='${Version}' "$lookupname" 2>/dev/null)
+          [[ -n "$pkgver" ]] && { pkgname="$lookupname"; break; }
+        done
+      fi
+      if [[ -n "$pkgname" && -n "$pkgver" ]]; then
+        php_distro_verdict "$ctx" "$pkgname" "$pkgver" "$fixedpkg"
+        return
+      fi
+    fi
+  fi
+
   if [[ -n "${FIXED[$br]:-}" ]]; then
     fx="${FIXED[$br]}"
     if (( patch < fx )); then
@@ -117,6 +186,11 @@ verdict_version() {
     else
       OK_COUNT=$((OK_COUNT+1)); FINDINGS+=("[CORRIGÉ]     $ctx : PHP $v >= $br.$fx")
     fi
+  elif [[ "$d_id" == debian || "$d_id" == ubuntu ]]; then
+    # Branche amont EOL ou non référencée ICI, mais Debian/Ubuntu peuvent la maintenir par backport
+    # SANS changer ce numéro (voir l'avertissement en tête de fichier) : ne jamais conclure
+    # "vulnérable" sur la seule foi du numéro amont pour ces deux distributions.
+    UNK_COUNT=$((UNK_COUNT+1)); FINDINGS+=("[À VÉRIFIER]  $ctx : PHP $v (branche $br amont EOL ou non référencée, mais $d_id ${d_ver:-?} peut la maintenir par backport sans changer ce numéro — vérifier le paquet système php$br, ou consulter security-tracker.debian.org / ubuntu.com/security/notices)")
   elif (( BASH_REMATCH[1] < 8 || (BASH_REMATCH[1] == 8 && BASH_REMATCH[2] < 2) )); then
     VULN_COUNT=$((VULN_COUNT+1)); FINDINGS+=("[VULNÉRABLE]  $ctx : PHP $v (branche EOL, pas de correctif amont — backport source ou migration)")
   else
@@ -125,15 +199,17 @@ verdict_version() {
 }
 
 # Script shell exécuté DANS un conteneur/une image : cherche les binaires PHP et affiche leur version
-PROBE='for b in php php-cgi php-fpm php-fpm8 frankenphp; do p=$(command -v $b 2>/dev/null) && echo "BIN $p"; done
+PROBE='if [ -r /etc/os-release ]; then . /etc/os-release; echo "OSREL ${ID:-} ${VERSION_ID:-}"; fi
+for b in php php-cgi php-fpm php-fpm8 frankenphp; do p=$(command -v $b 2>/dev/null) && echo "BIN $p"; done
 for p in /usr/local/bin/php /usr/local/sbin/php-fpm /usr/bin/php* /usr/sbin/php-fpm* /usr/local/bin/frankenphp; do [ -x "$p" ] && echo "BIN $p"; done
 v=$( (php -r "echo PHP_VERSION;" || php-cgi -v | sed -n "1p" | cut -d" " -f2) 2>/dev/null) && [ -n "$v" ] && echo "VER $v"
+dpkg -l 2>/dev/null | awk "tolower(\$0) ~ /^ii[[:space:]]+php[0-9]/ {print \"PKG\",\$2,\$3; exit}"
 true'
 
 # probe_target <runtime> <exec|run> <cible> <libellé> : sonde un conteneur (exec, toujours) ou
 # une image (run jetable --network none, UNIQUEMENT si --scan-images a été passé par l'appelant)
 probe_target() {
-  local rt="$1" mode="$2" tgt="$3" label="$4" out ver bins rc
+  local rt="$1" mode="$2" tgt="$3" label="$4" out ver bins rc c_id c_ver pkg_line pkgname pkgver
   if [[ "$mode" == exec ]]; then
     out=$(run_probe 20 "$rt" exec "$tgt" sh -c "$PROBE"); rc=$?
   else
@@ -151,7 +227,12 @@ probe_target() {
     return 0
   fi
   echo "  $label : binaires=[${bins% }] version=${ver:-?}"
-  if [[ -n "$ver" ]]; then verdict_version "$ver" "$label"
+  c_id=$(awk '$1=="OSREL"{print $2}' <<< "$out")
+  c_ver=$(awk '$1=="OSREL"{print $3}' <<< "$out")
+  pkg_line=$(awk '$1=="PKG"{print $2,$3; exit}' <<< "$out")
+  pkgname=""; pkgver=""
+  [[ -n "$pkg_line" ]] && { read -r pkgname pkgver <<< "$pkg_line"; }
+  if [[ -n "$ver" ]]; then verdict_version "$ver" "$label" "$c_id" "$c_ver" "$pkgname" "$pkgver"
   else UNK_COUNT=$((UNK_COUNT+1)); FINDINGS+=("[À VÉRIFIER]  $label : PHP présent, version indéterminée"); fi
 }
 
