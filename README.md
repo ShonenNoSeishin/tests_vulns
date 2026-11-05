@@ -13,6 +13,8 @@ Les scripts de `php2shell/` et `broccoli2shell/` sont en **lecture seule par dé
 |---|---|---|
 | [`php2shell/`](php2shell/) | PHP2Shell — RCE PHP non authentifiée via HTTP | CVE-2026-109618, CVE-2026-109619 |
 | [`broccoli2shell/`](broccoli2shell/) | Broccoli2Shell / Node2Shell / HTTP2Shell — décodeur Brotli (Node.js, Python, .NET, Linux, IIS) | CVE-2026-111497 |
+| [`cve-2026-98432/`](cve-2026-98432/) | Use-after-free dans le traitement TCP/IPv4 du noyau Linux — sans authentification | CVE-2026-98432 |
+| [`cve-2026-109518/`](cve-2026-109518/) | APT — contournement de signature menant à une exécution de code en root | CVE-2026-109518 |
 
 ## Quelle action effectuer une fois une faille détectée ?
 

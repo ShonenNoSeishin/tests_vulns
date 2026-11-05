@@ -46,12 +46,17 @@ Rien de particulier — aller directement à la section 2 (OS).
 
 ### LXC (conteneur système, ex. Proxmox)
 Un LXC **partage le kernel de son hôte** (contrairement à une VM), mais cela ne change
-**rien** à la procédure de remédiation : les versions de PHP, Node.js, libbrotli, .NET
+**rien** à la procédure de remédiation **pour une faille userspace** (PHP2Shell,
+Broccoli2Shell, CVE-2026-109518/APT) : les versions de PHP, Node.js, libbrotli, .NET, APT
 installées *dans* le LXC sont des paquets/binaires userspace, totalement indépendants du
-kernel de l'hôte Proxmox. Un kernel Proxmox récent fait tourner n'importe quelle version
-de ces logiciels sans contrainte. → Traiter exactement comme "VM/bare-metal", en
-continuant à la section 2 avec la distribution installée **dans le LXC** (pas celle du
-host Proxmox).
+kernel de l'hôte Proxmox. → Traiter exactement comme "VM/bare-metal", en continuant à la
+section 2 avec la distribution installée **dans le LXC** (pas celle du host Proxmox).
+
+⚠️ **Exception : CVE-2026-98432 (faille du noyau).** Pour une faille **kernel**, c'est
+l'inverse : patcher **l'hôte Proxmox uniquement** protège tous ses LXC (qui partagent son
+noyau) — inutile et sans effet de lancer `test_cve-2026-98432.sh` dans chaque LXC. En
+revanche, une **VM** Proxmox a son propre noyau indépendant : elle doit être vérifiée et
+patchée **séparément**, le correctif de l'hôte ne la protège pas.
 
 ### Image ou conteneur Docker/Podman (c'est lui l'objet vulnérable, pas l'hôte)
 Ne jamais corriger *dans* un conteneur en cours d'exécution (`exec` + `apt upgrade`
@@ -129,9 +134,18 @@ script avec `--scan-images`/`-ScanImages` (sinon une image jamais démarrée res
 | Broccoli2Shell | .NET (partagé ou self-contained) | [`broccoli2shell/README.md`](broccoli2shell/README.md) — section .NET | Voir §4a/4b ".NET" ci-dessus |
 | Broccoli2Shell | Copie embarquée (Pillow, 7-Zip, DuckDB, woff2…) | [`broccoli2shell/README.md`](broccoli2shell/README.md) — "Copies embarquées" | Mettre à jour le paquet applicatif qui l'embarque (ex. `pip install --upgrade Pillow`), pas de commande système directe |
 | Broccoli2Shell | Conteneur Docker/Podman | [`broccoli2shell/README.md`](broccoli2shell/README.md) — "Mitigation" | Voir §1 "Image Docker" ci-dessus |
+| CVE-2026-98432 (kernel TCP) | Hôte Proxmox VE | [`cve-2026-98432/README.md`](cve-2026-98432/README.md) | `apt update && apt upgrade` puis **reboot obligatoire** (migrer les VM avant, un nœud à la fois) |
+| CVE-2026-98432 (kernel TCP) | VM Linux (Debian/Ubuntu) | [`cve-2026-98432/README.md`](cve-2026-98432/README.md) | Idem, **dans la VM**, indépendamment de l'hôte — voir §1 "Exception LXC/VM" ci-dessus |
+| CVE-2026-98432 (kernel TCP) | Ubuntu, pas de correctif stable disponible | [`cve-2026-98432/README.md`](cve-2026-98432/README.md) — "Action à mener" | Mitigation temporaire (`sysctl net.mptcp.enabled=0`) + escalade équipe sécu/infra, pas une action L1 |
+| CVE-2026-98432 (kernel TCP) | MikroTik RouterOS 7 | [`cve-2026-98432/README.md`](cve-2026-98432/README.md) | Mise à jour RouterOS standard puis reboot du routeur |
+| CVE-2026-98432 (kernel TCP) | Sophos / FortiGate | [`cve-2026-98432/README.md`](cve-2026-98432/README.md) — "Limites" | Non testé par le script — suivre l'avis du fournisseur, escalade équipe sécu |
+| CVE-2026-109518 (APT) | Paquet système (Debian/Ubuntu/Proxmox) | [`cve-2026-109518/README.md`](cve-2026-109518/README.md) | `apt update && apt upgrade -o Acquire::Retries=0` |
+| CVE-2026-109518 (APT) | Conteneur Docker/Podman | [`cve-2026-109518/README.md`](cve-2026-109518/README.md) | Voir §1 "Image Docker" ci-dessus — reconstruire l'image |
+| CVE-2026-109518 (APT) | Ubuntu ≤ 20.04 sans Ubuntu Pro | [`cve-2026-109518/README.md`](cve-2026-109518/README.md) — "Action à mener" | Escalade équipe infra (Ubuntu Pro / migration / mitigation HTTPS) |
 
 Dans tous les cas : après toute action, **relancer le script correspondant**
-(`test_php2shell.sh`/`Test-Php2Shell.ps1` ou `test_broccoli2shell.sh`/`Test-Broccoli2Shell.ps1`,
+(`test_php2shell.sh`/`Test-Php2Shell.ps1`, `test_broccoli2shell.sh`/`Test-Broccoli2Shell.ps1`,
+`test_cve-2026-98432.sh`/`Test-CVE-2026-98432.ps1` ou `test_cve-2026-109518.sh`/`Test-CVE-2026-109518.ps1`,
 avec `--scan-images`/`-ScanImages` si Docker/Podman est présent) pour confirmer que la ligne
 passe de `[VULNÉRABLE]`/`[À VÉRIFIER]` à `[CORRIGÉ]`/`[OK]`, et que la ligne finale affiche
 `Confiance : COMPLÈTE`.
