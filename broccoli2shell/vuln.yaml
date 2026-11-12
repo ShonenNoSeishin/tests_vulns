@@ -1,0 +1,36 @@
+id: broccoli2shell
+title: "Broccoli2Shell — faille du décodeur Brotli (Node.js, Python, .NET, Linux, IIS)"
+cves: [CVE-2026-111497]
+severity: critical
+published: 2026-10-27
+updated: 2026-10-30
+exploited: true
+kev: true
+summary: >-
+  Le décodeur Brotli (compression web) peut être corrompu par un flux spécialement construit : toute application qui décompresse du Brotli non
+  vérifié est exposée. Exploitée activement (KEV du 27/10/2026). La bibliothèque est copiée dans Node.js, Python, .NET, IIS et de nombreux
+  logiciels : chaque pile se corrige séparément.
+affects:
+  - "libbrotli 1.0.3 à 1.2.0"
+  - "Node.js, Python (brotli/brotlicffi), .NET, IIS, copies embarquées (Pillow, 7-Zip, DuckDB, woff2…)"
+tags: [brotli, node, python, dotnet, web]
+concerned:
+  - "Un serveur ou une application traite du contenu `Content-Encoding: br` ou des fichiers compressés en Brotli (Node.js, Python, .NET, IIS, Nginx…)."
+not_concerned:
+  - "Piles sans Brotli ou déjà dans une version corrigée."
+tests:
+  - {os: linux, label: "Linux / macOS (hôte + conteneurs)", file: test_broccoli2shell.sh, run: "chmod +x test_broccoli2shell.sh && sudo ./test_broccoli2shell.sh --scan-images", note: "Lecture seule. Inventorie binaires, paquets, runtimes et conteneurs."}
+  - {os: windows, label: "Windows (IIS, Node, Python, .NET)", file: Test-Broccoli2Shell.ps1, run: ".\\Test-Broccoli2Shell.ps1 -ScanImages", note: "À lancer dans PowerShell, en administrateur de préférence."}
+results:
+  - {status: "VULNÉRABLE", meaning: "Version vulnérable du décodeur confirmée.", action: "Mettre à jour la pile concernée (Node, Python, .NET, paquet système, application)."}
+  - {status: "À VÉRIFIER", meaning: "Copie embarquée ou version non identifiable.", action: "Mettre à jour l'application qui embarque la copie."}
+  - {status: "CORRIGÉ", meaning: "Version corrigée.", action: "Rien."}
+fix:
+  - {for: "Paquet système (Debian/Ubuntu)", command: "apt update && apt install --only-upgrade libbrotli1"}
+  - {for: "Paquet système (Alpine)", command: "apk upgrade brotli-libs"}
+  - {for: "Python", command: "pip install --upgrade brotli brotlicffi"}
+  - {for: "Node.js / .NET", command: "Mettre à jour le runtime lui-même (la copie est interne) : voir le tableau du README."}
+  - {for: "Image Docker", command: "docker build --pull --no-cache -t mon-app . && docker compose up -d --force-recreate"}
+docs: [README.md]
+references:
+  - {title: "CISA KEV (ajout du 27/10/2026)", url: "https://www.cisa.gov/known-exploited-vulnerabilities-catalog"}

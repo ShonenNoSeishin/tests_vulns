@@ -3,6 +3,14 @@
 > Deux failles PHP critiques (CVSS 9.2 à 9.8) permettant une **exécution de code à distance via HTTP, sans authentification** (RCE). Correctifs publiés le 21/10/2026.
 > Le niveau de privilège obtenu dépend de l'utilisateur qui fait tourner PHP (souvent `www-data`/`apache`, parfois root sur les vieux appliances).
 
+## En 30 secondes
+
+| | |
+|---|---|
+| **Suis-je concerné ?** | Un serveur exécute PHP (Apache, nginx + PHP-FPM, IIS, XAMPP/WAMP, conteneur Docker PHP…). |
+| **Comment tester ?** | `sudo ./test_php2shell.sh --scan-images` (Linux) · `.\Test-Php2Shell.ps1 -ScanImages` (Windows). Lecture seule. |
+| **Comment corriger ?** | `apt install --only-upgrade 'php*'` puis redémarrer php-fpm/Apache ; reconstruire les images Docker. Branche ≤ 8.1 : migrer. |
+
 ## Explication courte
 
 Les deux failles touchent le traitement de certaines requêtes HTTP par le moteur PHP lui-même (pas une application PHP particulière) : PHP-FPM, Apache `mod_php`, `php-cgi`, FrankenPHP et LiteSpeed sont concernés. Un attaquant peut déclencher l'exécution de code à distance sans aucun accès préalable, simplement en contactant le service web qui sert du PHP.

@@ -7,14 +7,26 @@ Boîte à outils de détection — un dossier par faille, chacun avec :
 
 Les scripts de `php2shell/` et `broccoli2shell/` sont en **lecture seule par défaut** : ils n'exploitent rien, ne modifient rien, et n'envoient aucune requête à une application cible — ils inventorient les versions installées (binaires, paquets système, runtimes, conteneurs) localement, sur la machine où ils tournent. [`public-scan/`](public-scan/) est différent : c'est une **reconnaissance réseau active** (via nmap) pour le cas où vous n'avez qu'un nom de domaine ou une IP publique, sans accès shell — voir l'avertissement dans son `README.md` avant de l'utiliser.
 
-## Failles couvertes
+## Dernières failles
 
-| Dossier | Faille | CVE |
-|---|---|---|
-| [`php2shell/`](php2shell/) | PHP2Shell — RCE PHP non authentifiée via HTTP | CVE-2026-109618, CVE-2026-109619 |
-| [`broccoli2shell/`](broccoli2shell/) | Broccoli2Shell / Node2Shell / HTTP2Shell — décodeur Brotli (Node.js, Python, .NET, Linux, IIS) | CVE-2026-111497 |
-| [`cve-2026-98432/`](cve-2026-98432/) | Use-after-free dans le traitement TCP/IPv4 du noyau Linux — sans authentification | CVE-2026-98432 |
-| [`cve-2026-109518/`](cve-2026-109518/) | APT — contournement de signature menant à une exécution de code en root | CVE-2026-109518 |
+| Date | Faille | Gravité | Exploitée ? | Dossier |
+|---|---|---|---|---|
+| 12/11/2026 | **sshole** — contournement de mot de passe OpenSSH (Alpine/musl) · CVE-2026-123158 | 🟠 Haute | ✅ KEV | [`sshole-cve-2026-123158/`](sshole-cve-2026-123158/) |
+| 10/11/2026 | **Fortinet** — lot de novembre (FortiManager FGFM, FortiOS OSPF) · CVE-2026-126261, CVE-2026-126253 | 🔴 Critique | non connue | [`fortinet-novembre-2026/`](fortinet-novembre-2026/) |
+| 05/11/2026 | **APT** — contournement de signature → root · CVE-2026-109518 | 🟠 Haute | non connue | [`cve-2026-109518/`](cve-2026-109518/) |
+| 05/11/2026 | **Noyau Linux** — use-after-free TCP/IPv4 · CVE-2026-98432 | 🔴 Critique | non connue | [`cve-2026-98432/`](cve-2026-98432/) |
+| 27/10/2026 | **Broccoli2Shell** — décodeur Brotli (Node, Python, .NET, IIS) · CVE-2026-111497 | 🔴 Critique | ✅ KEV | [`broccoli2shell/`](broccoli2shell/) |
+| 21/10/2026 | **PHP2Shell** — RCE PHP sans authentification · CVE-2026-109618/109619 | 🔴 Critique | non connue | [`php2shell/`](php2shell/) |
+
+## Technicien : êtes-vous touché ? En 3 étapes
+
+1. **Repérer** votre cas dans le tableau ci-dessus (ou chercher votre produit/CVE dans l'interface IRM).
+2. **Tester** : télécharger le script du dossier et le lancer (lecture seule par défaut). Chaque article commence par un encadré
+   « **En 30 secondes** » : *Suis-je concerné ? Comment tester ? Comment corriger ?*
+3. **Corriger** puis **relancer le même script** : la ligne doit passer à `[CORRIGÉ]` avec `Confiance : COMPLÈTE`.
+
+Chaque dossier contient aussi un fichier **`vuln.yaml`** (métadonnées lues par l'interface IRM : gravité, dates, commandes de test et de correction),
+voir [`docs/FORMAT.md`](docs/FORMAT.md).
 
 ## Quelle action effectuer une fois une faille détectée ?
 
@@ -75,6 +87,8 @@ Le code de sortie suit la même logique (`0` = rien à signaler, `1` = à vérif
 
 ## Ajouter une nouvelle faille
 
+Modèle prêt à copier : [`docs/TEMPLATE.md`](docs/TEMPLATE.md) (article) et [`docs/FORMAT.md`](docs/FORMAT.md) (`vuln.yaml`).
+
 1. Créer un dossier `<nom-de-la-faille>/`.
 2. Y écrire un script bash `test_<nom>.sh` et/ou un script PowerShell `Test-<Nom>.ps1`, sur le modèle d'un dossier existant :
    - section « 0. Prérequis » en premier ;
@@ -83,4 +97,4 @@ Le code de sortie suit la même logique (`0` = rien à signaler, `1` = à vérif
    - une ligne finale « Confiance » explicite (COMPLÈTE / PARTIELLE / INCOMPLÈTE / confirmé vulnérable) ;
    - code de sortie `0`/`1`/`2`.
 3. Écrire le `README.md` du dossier : explication courte, tableau des composants concernés et versions corrigées, démonstration (inventaire + mention de la méthode active sans fournir de payload), procédure, mitigation, limites, références.
-4. Ajouter une ligne dans le tableau « Failles couvertes » ci-dessus.
+4. Écrire le `vuln.yaml` du dossier (gravité, dates, commandes), puis ajouter une ligne en tête du tableau « Dernières failles » ci-dessus.

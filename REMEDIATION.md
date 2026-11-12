@@ -142,6 +142,8 @@ script avec `--scan-images`/`-ScanImages` (sinon une image jamais démarrée res
 | CVE-2026-109518 (APT) | Paquet système (Debian/Ubuntu/Proxmox) | [`cve-2026-109518/README.md`](cve-2026-109518/README.md) | `apt update && apt upgrade -o Acquire::Retries=0` |
 | CVE-2026-109518 (APT) | Conteneur Docker/Podman | [`cve-2026-109518/README.md`](cve-2026-109518/README.md) | Voir §1 "Image Docker" ci-dessus — reconstruire l'image |
 | CVE-2026-109518 (APT) | Ubuntu ≤ 20.04 sans Ubuntu Pro | [`cve-2026-109518/README.md`](cve-2026-109518/README.md) — "Action à mener" | Escalade équipe infra (Ubuntu Pro / migration / mitigation HTTPS) |
+| sshole (CVE-2026-123158) | sshd sur Alpine/musl sans PAM (hôte ou conteneur) | [`sshole-cve-2026-123158/README.md`](sshole-cve-2026-123158/README.md) | `apk upgrade openssh-server && rc-service sshd restart` ; reconstruire l'image Docker |
+| Fortinet novembre 2026 | FortiManager / FortiAnalyzer / FortiOS en version antérieure aux correctifs | [`fortinet-novembre-2026/README.md`](fortinet-novembre-2026/README.md) | Mise à niveau (8.0.1/7.6.8/7.4.6/7.2.9 FortiManager ; 8.0.2/7.6.8/7.4.13/7.2.14 FortiOS) |
 
 Dans tous les cas : après toute action, **relancer le script correspondant**
 (`test_php2shell.sh`/`Test-Php2Shell.ps1`, `test_broccoli2shell.sh`/`Test-Broccoli2Shell.ps1`,

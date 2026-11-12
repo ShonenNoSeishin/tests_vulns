@@ -1,0 +1,35 @@
+id: php2shell
+title: "PHP2Shell — exécution de code à distance dans PHP (sans authentification)"
+cves: [CVE-2026-109618, CVE-2026-109619]
+severity: critical
+published: 2026-10-21
+updated: 2026-10-30
+exploited: false
+kev: false
+summary: >-
+  Deux failles du moteur PHP lui-même (PHP-FPM, mod_php, php-cgi, FrankenPHP, LiteSpeed) permettent d'exécuter du code via une simple requête
+  HTTP, sans authentification (CVSS 9.2 à 9.8). Attention aux paquets Debian/Ubuntu : le correctif est rétroporté sans changer le numéro de version.
+affects:
+  - "PHP 8.5 < 8.5.12, 8.4 < 8.4.27, 8.3 < 8.3.36, 8.2 < 8.2.35"
+  - "PHP ≤ 8.1 (fin de vie, sans correctif officiel)"
+tags: [php, web, rce]
+concerned:
+  - "Un serveur web exécute PHP (Apache, nginx + PHP-FPM, IIS, XAMPP/WAMP, conteneur Docker PHP…)."
+not_concerned:
+  - "Aucun PHP installé. Un paquet Debian/Ubuntu avec le correctif rétroporté est correct même si PHP_VERSION paraît ancien (le script le vérifie)."
+tests:
+  - {os: linux, label: "Linux / macOS (hôte + conteneurs)", file: test_php2shell.sh, run: "chmod +x test_php2shell.sh && sudo ./test_php2shell.sh --scan-images", note: "Lecture seule. --scan-images inspecte aussi les images locales."}
+  - {os: windows, label: "Windows (XAMPP/WAMP, IIS, Docker Desktop)", file: Test-Php2Shell.ps1, run: ".\\Test-Php2Shell.ps1 -ScanImages", note: "À lancer dans PowerShell, en administrateur de préférence."}
+results:
+  - {status: "VULNÉRABLE", meaning: "Version PHP vulnérable confirmée.", action: "Mettre à jour PHP (voir correction), puis redémarrer php-fpm/Apache/IIS."}
+  - {status: "À VÉRIFIER", meaning: "Branche non référencée ou copie embarquée.", action: "Contrôler le paquet à la main (README)."}
+  - {status: "CORRIGÉ", meaning: "Version ou paquet corrigé.", action: "Rien."}
+fix:
+  - {for: "Debian / Ubuntu (paquet système)", command: "apt update && apt install --only-upgrade 'php*' && systemctl restart php*-fpm apache2"}
+  - {for: "Image Docker PHP", command: "docker build --pull --no-cache -t mon-app . && docker compose up -d --force-recreate"}
+  - {for: "Mitigation temporaire (CVE-2026-109619)", command: "session.upload_progress.enabled = 0  # dans php.ini, puis redémarrer les workers"}
+  - {for: "PHP ≤ 8.1 sans correctif", command: "Migrer vers 8.2 / 8.3 / 8.4 / 8.5, ou isoler le service."}
+fixed_versions: "PHP 8.5.12, 8.4.27, 8.3.36, 8.2.35 ; paquets Debian 12 8.2.35-1~deb12u1, Debian 13 8.4.27-1~deb13u1, Ubuntu 24.04 8.3.6-0ubuntu0.24.04.13…"
+docs: [README.md]
+references:
+  - {title: "Debian security tracker CVE-2026-109618", url: "https://security-tracker.debian.org/tracker/CVE-2026-109618"}

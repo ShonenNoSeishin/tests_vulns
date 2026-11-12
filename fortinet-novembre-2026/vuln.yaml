@@ -1,0 +1,47 @@
+id: fortinet-novembre-2026
+title: "Fortinet — lot de correctifs de novembre 2026 (FortiManager, FortiOS)"
+cves: [CVE-2026-126261, CVE-2026-126253]
+severity: critical
+published: 2026-11-10
+updated: 2026-11-12
+exploited: false
+kev: false
+summary: >-
+  Fortinet a publié le 10 novembre une centaine de correctifs. Deux avis vérifiés : FortiManager/FortiAnalyzer (exécution de code sans
+  authentification via le service FGFM, CVSS 9.0) et FortiOS (contournement d'authentification OSPF, CVSS 9.3). Pas d'exploitation connue
+  à ce jour, mais les produits Fortinet sont des cibles habituelles : mettre à jour rapidement.
+affects:
+  - FortiManager / FortiAnalyzer 8.0.0, 7.6.0–7.6.7, 7.4.0–7.4.5, 7.2.0–7.2.8
+  - FortiOS 8.0.0–8.0.1, 7.6.0–7.6.7, 7.4.0–7.4.12, 7.2.0–7.2.13, 7.0.1–7.0.19
+tags: [fortinet, pare-feu, fortios, fortimanager]
+concerned:
+  - "Vous administrez un FortiManager ou FortiAnalyzer dans une des versions ci-dessus, surtout si le port FGFM (TCP 541) est joignable depuis un réseau non fiable."
+  - "Vous avez un FortiGate (FortiOS) dans une des versions ci-dessus avec OSPF activé (attaque depuis un réseau adjacent)."
+not_concerned:
+  - "Versions ≥ 8.0.2 / 7.6.8 / 7.4.13 / 7.2.14 (FortiOS) ou ≥ 8.0.1 / 7.6.8 / 7.4.6 / 7.2.9 (FortiManager)."
+  - "FortiMail, FortiSASE et les autres produits du lot : voir le portail PSIRT (non couverts par l'outil de ce dossier)."
+tests:
+  - os: linux
+    label: "Linux / macOS — comparer une version"
+    file: check_fortinet_version.sh
+    run: "chmod +x check_fortinet_version.sh && ./check_fortinet_version.sh fortios 7.4.12"
+    note: "Aucune connexion au pare-feu : vous donnez la version lue dans l'interface ou par `get system status`."
+  - os: windows
+    label: "Windows — comparer une version"
+    file: Check-FortinetVersion.ps1
+    run: ".\\Check-FortinetVersion.ps1 -Product fortios -Version 7.4.12"
+    note: "Même logique en PowerShell."
+results:
+  - {status: "VULNÉRABLE", meaning: "Version antérieure à la première version corrigée de sa branche.", action: "Planifier la mise à jour (sauvegarde de la configuration d'abord)."}
+  - {status: "À VÉRIFIER", meaning: "Branche non listée dans l'avis, ou version illisible.", action: "Consulter le portail PSIRT Fortinet."}
+  - {status: "CORRIGÉ", meaning: "Version corrigée pour CET avis.", action: "Viser la dernière version de la branche : le lot compte d'autres corrections."}
+fix:
+  - {for: "FortiManager / FortiAnalyzer", command: "Mise à niveau vers 8.0.1 / 7.6.8 / 7.4.6 / 7.2.9 (ou plus récent) — Système > Paramètres > Firmware ; sauvegarder avant."}
+  - {for: "FortiOS (FortiGate)", command: "Mise à niveau vers 8.0.2 / 7.6.8 / 7.4.13 / 7.2.14 (ou plus récent) — Système > Firmware ; un nœud de cluster à la fois. La branche 7.0 n'a pas de correctif : migrer."}
+  - {for: "En attendant (FortiManager)", command: "Restreindre le port FGFM (TCP 541) et l'accès d'administration aux seuls réseaux de gestion ; ne jamais les exposer à Internet."}
+fixed_versions: "FortiManager : 8.0.1, 7.6.8, 7.4.6, 7.2.9. FortiOS : 8.0.2, 7.6.8, 7.4.13, 7.2.14."
+docs: [README.md]
+references:
+  - {title: "Avis FG-IR-26-275 — FortiManager FGFM (Fortinet PSIRT)", url: "https://www.fortiguard.com/psirt/FG-IR-26-275"}
+  - {title: "Avis FG-IR-26-267 — FortiOS OSPF (Fortinet PSIRT)", url: "https://www.fortiguard.com/psirt/FG-IR-26-267"}
+  - {title: "Portail PSIRT Fortinet", url: "https://www.fortiguard.com/psirt"}

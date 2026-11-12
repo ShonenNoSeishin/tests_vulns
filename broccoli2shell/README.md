@@ -3,6 +3,14 @@
 > Faille critique (CVSS 9.2) dans le **décodeur Brotli** (bibliothèque de compression de Google). Toute application qui décompresse du Brotli non vérifié — reçu dans une requête (`Content-Encoding: br`) ou dans une réponse d'un serveur distant — peut être affectée : écriture hors limites dans le décodeur, pouvant aller jusqu'à l'exécution de code.
 > Ajoutée au catalogue **CISA KEV** le 27/10/2026 (exploitée activement). Alias : Node2Shell (nom d'origine), HTTP2Shell, Broccoli2Shell.
 
+## En 30 secondes
+
+| | |
+|---|---|
+| **Suis-je concerné ?** | Une application décompresse du Brotli (`Content-Encoding: br`) : Node.js, Python, .NET, IIS, Nginx, copies embarquées. |
+| **Comment tester ?** | `sudo ./test_broccoli2shell.sh --scan-images` (Linux) · `.\Test-Broccoli2Shell.ps1 -ScanImages` (Windows). Lecture seule. |
+| **Comment corriger ?** | Mettre à jour **chaque pile** concernée (paquet `libbrotli1`/`brotli-libs`, Node.js, .NET, Python `brotli`, application embarquant une copie). |
+
 ## Explication courte
 
 Le décodeur C de Brotli (versions **1.0.3 à 1.2.0**) contient un défaut qui permet, en lui donnant un flux Brotli spécialement construit, de corrompre la mémoire du processus qui le décompresse. Le code a été introduit en février 2026 et corrigé sans bruit en octobre — personne ne l'avait signalé comme un problème de sécurité avant.
