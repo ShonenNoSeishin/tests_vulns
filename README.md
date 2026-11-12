@@ -9,7 +9,7 @@ Les scripts de `php2shell/` et `broccoli2shell/` sont en **lecture seule par dé
 
 ## Dernières failles
 
-| Date | Faille | Gravité | Exploitée ? | Dossier |
+| Date | Faille (CVE) | Gravité | Exploitée ? | Dossier |
 |---|---|---|---|---|
 | 12/11/2026 | **sshole** — contournement de mot de passe OpenSSH (Alpine/musl) · CVE-2026-123158 | 🟠 Haute | ✅ KEV | [`sshole-cve-2026-123158/`](sshole-cve-2026-123158/) |
 | 10/11/2026 | **Fortinet** — lot de novembre (FortiManager FGFM, FortiOS OSPF) · CVE-2026-126261, CVE-2026-126253 | 🔴 Critique | non connue | [`fortinet-novembre-2026/`](fortinet-novembre-2026/) |
