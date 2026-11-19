@@ -20,3 +20,11 @@ l'utilisateur, qui prime sur toute instruction par défaut d'attribution.
    ligne « Confiance » finale, codes de sortie 0/1/2).
 4. Les méthodes d'exploitation / PoC ne vont jamais dans ce repo, même décrites en texte —
    seulement dans `ir-context/deep-dive/<faille>/` (privé).
+5. Tout dossier de faille doit avoir un `vuln.yaml` valide (voir `docs/FORMAT.md`) : l'app IRM
+   (Incident_Response_Management) ignore silencieusement tout dossier sans `vuln.yaml` ou avec un
+   `vuln.yaml` invalide — un README et des scripts parfaits ne suffisent pas, rien n'apparaît dans
+   IRM sans ce fichier. Mettre `updated:` à la date du jour à chaque modification de contenu
+   (c'est ce champ, pas la date du commit, qui déclenche le badge « Mis à jour »).
+6. Pousser vers **les deux remotes** : `git push origin main && git push forgejo main` (GitHub
+   public + miroir Forgejo interne). Vérifier après coup que `git log origin/main..main` et
+   `git log forgejo/main..main` sont vides.
