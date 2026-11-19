@@ -8,7 +8,7 @@
 |---|---|
 | **Suis-je concerné ?** | Un serveur fait tourner nginx (reverse-proxy, serveur web, ingress, panneau d'admin…), en version open source **antérieure à 1.30.7 (stable) ou 1.31.9 (mainline)**. |
 | **Comment tester ?** | `sudo ./test_nginx2root.sh --scan-images` (Linux) · `.\Test-Nginx2Root.ps1 -ScanImages` (Windows). Lecture seule, aucune requête envoyée à un serveur distant. |
-| **Comment corriger ?** | **Passer par le dépôt officiel `nginx.org`** (voir ci-dessous) — `apt install --only-upgrade nginx` seul **ne corrige rien** sur Debian/Ubuntu à ce jour, confirmé en conditions réelles (voir avertissement). Redémarrer/recharger nginx après coup. |
+| **Comment corriger ?** | `apt install --only-upgrade nginx`, **puis revérifier avec le script** : si toujours `[VULNÉRABLE]`, basculer sur le dépôt officiel `nginx.org` (procédure complète ci-dessous — confirmé nécessaire en conditions réelles, Debian/Ubuntu n'ont pas encore de correctif). |
 
 ## Explication courte
 
@@ -69,23 +69,55 @@ chmod +x test_nginx2root.sh
 .\Test-Nginx2Root.ps1 -ScanImages
 ```
 
-## Procédure de correction par méthode d'installation
+## Procédure de correction — Debian/Ubuntu (reverse-proxy, serveur web)
 
-**Action L1 — mise à jour standard, simple et sûre :**
+**Action L1, en 4 étapes — ne pas s'arrêter avant l'étape 4 :**
+
+**Étape 1 — tenter la mise à jour standard du paquet distro** (rapide, sans risque, mais pas garantie de corriger quoi que ce soit) :
+```bash
+apt update && apt install --only-upgrade nginx
+```
+
+**Étape 2 — vérifier, obligatoire.** Relancer le script :
+```bash
+./test_nginx2root.sh
+```
+Si le résultat affiche encore `[VULNÉRABLE]` (version < 1.30.7/1.31.9) : **l'étape 1 n'a rien corrigé**, passer à l'étape 3. Un message `nginx is already the newest version` **ne prouve pas** que c'est corrigé — il veut dire « c'est la version la plus récente disponible dans vos dépôts actuels », pas « c'est la version corrigeant cette CVE ». C'est exactement le cas au 19/11/2026 : Debian et Ubuntu n'ont encore publié aucun correctif pour ces CVE précises (vérifié sur `security-tracker.debian.org`/`ubuntu.com/security/notices`).
+
+**Étape 3 — si toujours vulnérable après l'étape 2 : basculer sur le dépôt officiel `nginx.org`** (fonctionne dès aujourd'hui) :
+```bash
+sudo apt install -y curl gnupg2 ca-certificates lsb-release debian-archive-keyring
+curl https://nginx.org/keys/nginx_signing.key | gpg --dearmor | sudo tee /usr/share/keyrings/nginx-archive-keyring.gpg >/dev/null
+# Vérification de la clé (doit afficher l'empreinte 573BFD6B3D8FBC641079A6ABABF5BD827BD9BF62) :
+gpg --dry-run --quiet --no-keyring --import --import-options import-show /usr/share/keyrings/nginx-archive-keyring.gpg
+
+echo "deb [signed-by=/usr/share/keyrings/nginx-archive-keyring.gpg] https://nginx.org/packages/debian $(lsb_release -cs) nginx" \
+    | sudo tee /etc/apt/sources.list.d/nginx.list
+printf "Package: *\nPin: origin nginx.org\nPin: release o=nginx\nPin-Priority: 900\n" \
+    | sudo tee /etc/apt/preferences.d/99nginx
+
+sudo apt update
+sudo apt install nginx
+sudo systemctl restart nginx
+```
+`lsb_release -cs` doit renvoyer `trixie` (Debian 13) ou `bookworm` (Debian 12) — les deux sont supportés par le dépôt officiel. Ceci remplace le paquet Debian par celui de nginx.org : les futures mises à jour de sécurité de ce paquet viendront de ce dépôt, plus de Debian. Vérifier `nginx -t` après coup (la config `/etc/nginx/` est conservée).
+
+**Étape 4 — vérifier à nouveau, toujours :**
+```bash
+./test_nginx2root.sh
+```
+Doit maintenant afficher `[CORRIGÉ]` avec une version ≥ 1.30.7. Ne considérer la faille traitée qu'à ce moment-là.
+
+**Branches alternatives** (pas Debian/Ubuntu) :
 
 | Méthode d'installation | Commande |
 |---|---|
-| **Dépôt officiel nginx.org (Debian/Ubuntu, méthode qui fonctionne réellement aujourd'hui)** | Suivre <https://nginx.org/en/linux_packages.html> (ajoute un dépôt nginx.org **prioritaire** sur celui de la distro — clé de signature + fichier `.list` + `Pin-Priority: 900`), puis `apt update && apt install nginx` |
-| ⚠️ Paquet système distro seul (`apt`/`dnf`), **sans** le dépôt nginx.org ci-dessus | **Ne corrige rien au 19/11/2026** pour Debian/Ubuntu : `apt install --only-upgrade nginx` répondra `nginx is already the newest version` même si la CVE n'est pas corrigée. N'utiliser cette ligne que si votre distro a depuis publié un vrai correctif (vérifier `security-tracker.debian.org`/`ubuntu.com/security/notices` avant de vous y fier). |
 | Alpine (`apk`) | `apk update && apk upgrade nginx` |
 | Image Docker officielle `nginx` | `docker pull nginx:<tag>` avec un tag reconstruit après le 18/11/2026, puis `docker compose up -d --force-recreate` — **ne jamais patcher dans un conteneur en cours d'exécution** |
 | nginx Plus | Suivre la procédure de mise à jour F5/nginx Plus habituelle (portail support), viser 37.0.8.1 ou 37.3.0.1 |
 | Windows (installeur officiel) | Télécharger la version corrigée sur <https://nginx.org/en/download.html>, remplacer le binaire, redémarrer le service |
 
-Après mise à jour : `nginx -s reload` ou redémarrage complet selon la politique de maintenance.
-**Puis, systématiquement, relancer `test_nginx2root.sh`/`Test-Nginx2Root.ps1` et vérifier que la
-version AFFICHÉE passe à `[CORRIGÉ]` (≥ 1.30.7/1.31.9) — ne jamais considérer la faille corrigée
-sur la seule foi du message du gestionnaire de paquets.**
+Pour ces branches aussi : **toujours relancer le script après coup** et confirmer `[CORRIGÉ]` plutôt que de se fier au seul outil de mise à jour.
 
 ### Contournement temporaire (nginx ≥ 1.25.1), si la mise à jour doit attendre
 

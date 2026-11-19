@@ -48,19 +48,21 @@ la version la plus récente **disponible dans les dépôts configurés** », jam
 L'app IRM affiche le champ `fix:` directement, sans forcément montrer tout le README — la
 nuance doit donc vivre **dans le YAML lui-même**, pas seulement en prose dans le README.
 
-Conséquences concrètes pour chaque `vuln.yaml` :
+**Préférence utilisateur explicite (2026-11-19)** : commencer par la commande standard du
+gestionnaire de paquets reste tout à fait acceptable — ce n'est pas elle le problème, c'est
+l'absence d'étape de vérification et de bascule claire après coup. Structurer `fix:` en **séquence
+numérotée** quand aucun rétroportage distro n'est confirmé :
 
-1. **Vérifier le statut du rétroportage avant d'écrire `fix:`** (tracker de sécurité officiel de
-   chaque distro pertinente, pas une supposition). Ce statut doit être revérifié à chaque mise à
-   jour de la fiche — il peut changer entre deux relectures.
-2. **Le premier élément de `fix:` doit toujours être celui qui corrige réellement la faille
-   aujourd'hui.** Si aucun rétroportage distro n'existe encore, ce n'est PAS la commande standard
-   du gestionnaire de paquets (dépôt amont officiel, backport manuel, contournement — selon ce qui
-   marche vraiment).
-3. **Si la commande standard du gestionnaire de paquets est quand même listée alors qu'aucun
-   rétroportage n'est confirmé**, son `command:` doit porter l'avertissement **dans la chaîne
-   elle-même** (pas seulement dans `for:`), par exemple :
-   `"NE CORRIGE RIEN tant qu'aucun correctif distro n'est sorti pour cette CVE précise -- 'already the newest version' ne le prouve pas, voir le dépôt amont ci-dessus"`.
-4. **Toujours terminer `fix:` par un rappel de vérification** pointant vers le script de détection
-   du dossier, pas vers le seul message du gestionnaire de paquets, par exemple :
-   `{for: "Après toute action", command: "Relancer le script de détection et vérifier le numéro de version affiché -- ne jamais se fier au seul message du gestionnaire de paquets"}`.
+1. `{for: "Étape 1 -- <distro>, tenter la mise à jour standard", command: "<commande standard>"}`
+   — présentée normalement, pas comme un piège.
+2. `{for: "Étape 2 -- OBLIGATOIRE, vérifier que l'étape 1 a réellement corrigé", command: "Relancer <script>. Si encore [VULNÉRABLE], l'étape 1 n'a rien corrigé -- passer à l'étape 3. Un message '<distro> already the newest version' ne prouve PAS que c'est corrigé."}`
+3. `{for: "Étape 3 -- SI toujours vulnérable après l'étape 2 : <nom du vrai correctif>", command: "<commandes shell complètes et directement copiables -- JAMAIS un lien seul ni un 'voir le README'>"}`
+4. `{for: "Étape finale -- toujours", command: "Relancer le script une dernière fois et confirmer [CORRIGÉ] avant de considérer la faille traitée."}`
+
+Si un rétroportage distro **est** confirmé dès la recherche initiale, cette séquence numérotée
+n'est pas nécessaire — un `fix:` classique (une entrée par cas) suffit, comme dans
+`php2shell/vuln.yaml`.
+
+Dans tous les cas : **vérifier le statut du rétroportage avant d'écrire `fix:`** (tracker de
+sécurité officiel de la distro, pas une supposition), et le revérifier à chaque mise à jour de la
+fiche — ce statut change avec le temps.

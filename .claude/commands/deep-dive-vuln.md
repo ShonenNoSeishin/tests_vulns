@@ -71,11 +71,21 @@ du repo (relire un dossier existant, ex. `php2shell/`, avant d'écrire) :
     procédure dangereuse pour du L1.
   - **Aucune méthode d'exploitation ici.** Mention possible : "méthode active de vérification
     disponible dans `public-scan/`" si pertinent, sans payload.
-  - Si aucun rétroportage distro n'est confirmé (voir étape 1) : le dire en encadré bien visible
-    (pas noyé en fin de tableau), mettre le vrai correctif disponible (dépôt amont, backport
-    manuel, contournement) en premier dans la procédure, et terminer la section correction par un
-    rappel explicite de relancer le script pour confirmer — ne jamais laisser la commande standard
-    du gestionnaire de paquets comme seule option présentée.
+  - **Si aucun rétroportage distro n'est confirmé (voir étape 1), structurer la section
+    correction en séquence numérotée escalade — préférence utilisateur explicite (2026-11-19) :
+    commencer par la commande standard est accepté, à condition que la suite soit sans ambiguïté.**
+    1. Étape 1 : la commande standard du gestionnaire de paquets (rapide, sans risque, mais pas
+       garantie de corriger quoi que ce soit) — présentée normalement, pas comme un piège.
+    2. Étape 2, **obligatoire** : relancer le script de détection. Expliciter que "already the
+       newest version" (ou équivalent apt/dnf/apk) ne prouve pas que c'est corrigé — seulement
+       que c'est la version la plus récente **disponible dans les dépôts configurés**.
+    3. Étape 3, déclenchée explicitement **si l'étape 2 montre encore `[VULNÉRABLE]`** : le
+       correctif qui fonctionne réellement, **commandes complètes données en clair à cet endroit
+       même** (jamais un simple lien ou un "voir ci-dessous") — dépôt amont officiel, backport
+       manuel, contournement, selon ce qui s'applique. Ne jamais faire chercher la vraie
+       procédure ailleurs une fois que le lecteur sait qu'il en a besoin.
+    4. Étape finale : relancer le script une dernière fois et confirmer `[CORRIGÉ]` avant de
+       considérer la faille traitée.
 - Ajoute une ligne dans le tableau « Failles couvertes » de `README.md` racine.
 - Mets à jour `REMEDIATION.md` (arbre de décision) avec le nouveau cas.
 - **Crée ou mets à jour `<slug>/vuln.yaml` — OBLIGATOIRE, pas optionnel.** C'est ce fichier que lit
@@ -91,19 +101,17 @@ du repo (relire un dossier existant, ex. `php2shell/`, avant d'écrire) :
     fichier présent à côté du `vuln.yaml`, pas un chemin d'un autre dossier) ;
   - `results`, `fix`, `references` : uniquement des liens `https://` officiels, jamais de méthode
     d'exploitation (même règle que le README).
-  - **`fix:` — règle anti-faux-sentiment-de-sécurité (voir `docs/FORMAT.md` pour le détail
-    complet), à appliquer systématiquement, pas seulement quand le cas se présente de façon
-    évidente** : l'app IRM affiche ce champ directement, sans forcément montrer le README complet,
-    donc la nuance doit vivre dans le YAML lui-même.
-    1. Le **premier** élément de `fix:` doit être celui qui corrige réellement la faille
-       **aujourd'hui**, d'après ce que tu as vérifié à l'étape 1 — jamais une commande standard de
-       gestionnaire de paquets si aucun rétroportage distro n'est confirmé.
-    2. Si une commande de gestionnaire de paquets est quand même listée alors qu'aucun
-       rétroportage n'existe, son `command:` doit porter l'avertissement **dans la chaîne
-       elle-même** (pas seulement dans `for:`) — ex. `"NE CORRIGE RIEN tant qu'aucun correctif
-       distro n'est sorti pour cette CVE précise -- voir le dépôt amont ci-dessus"`.
-    3. **Toujours** terminer `fix:` par un élément du type
-       `{for: "Après toute action", command: "Relancer le script de détection et vérifier le numéro de version affiché -- ne jamais se fier au seul message du gestionnaire de paquets"}`.
+  - **`fix:` — même règle en séquence numérotée que pour le README ci-dessus (voir
+    `docs/FORMAT.md` pour le détail complet), à appliquer systématiquement.** L'app IRM affiche
+    ce champ directement, sans forcément montrer le README complet : la séquence complète doit
+    donc vivre dans le YAML lui-même, pas seulement en prose.
+    1. `{for: "Étape 1 -- ...", command: "<commande standard>"}` — accepté normalement, pas
+       présenté comme un piège.
+    2. `{for: "Étape 2 -- OBLIGATOIRE, vérifier", command: "Relancer <script>. Si encore [VULNÉRABLE], l'étape 1 n'a rien corrigé -- passer à l'étape 3. 'already the newest version' ne prouve PAS que c'est corrigé."}`
+    3. `{for: "Étape 3 -- SI toujours vulnérable après l'étape 2 : <le vrai correctif>", command: "<commandes shell complètes et directement copiables, PAS un lien seul ni un 'voir le README'>"}`
+    4. `{for: "Étape finale -- toujours", command: "Relancer le script une dernière fois et confirmer [CORRIGÉ] avant de considérer la faille traitée."}`
+    Si un rétroportage distro est confirmé dès l'étape 1 (recherche), cette séquence n'est pas
+    nécessaire — un simple `fix:` classique suffit, comme dans `php2shell/vuln.yaml`.
 
 ## 3. Volet privé — `/home/thib/ir-context/deep-dive/<slug>/`
 
