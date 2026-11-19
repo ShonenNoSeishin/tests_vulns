@@ -50,6 +50,16 @@ Classe par ordre de criticité selon `company-profile.md` :
 5. Windows Server — SQL / TS, puis Ubuntu Server
 6. Reste, seulement si KEV ou CVSS ≥ 7
 
+Pour chaque faille retenue dans le résumé exécutif, recroiser aussi avec la section « Liste
+exhaustive des solutions à vérifier » de `company-profile.md` (Veeam, Nakivo, Elastix, Andrisoft
+WANGuard, Datalust Seq, LibreNMS, Observium, Docker, LXC, SMB/SFTP, Cisco, Ubiquiti, HP/Aruba,
+nginx, Certbot, Odoo, Nextcloud, JumpCloud, Python/Django/React/PHP...) — cette liste est plus
+large que les 6 catégories ci-dessus, qui restent l'ordre de *priorité* pour décider quoi traiter
+en premier. La matrice d'impact **structurée** (une entrée par solution, pas juste une mention au
+fil du texte) n'est obligatoire que dans les fiches `/deep-dive-vuln` (`vuln.yaml` → `impact:`,
+voir `docs/FORMAT.md`) — la veille elle-même reste un document privé plus informel, mais doit
+quand même signaler explicitement si une solution de cette liste est concernée.
+
 ## 1bis. Plages IP publiques Cloudflare/OVH/Gandi (whitelists)
 
 À chaque veille, vérifie et mets à jour `/home/thib/ir-context/veille/ip-ranges-dns.md` :

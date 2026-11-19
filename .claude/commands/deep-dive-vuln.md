@@ -39,6 +39,26 @@ distro concernée, CISA KEV) :
 Si une information clé manque après recherche (ex. CVE ambigu, plusieurs failles portent un nom
 proche), pose la question à l'utilisateur plutôt que de deviner.
 
+## 1bis. Matrice d'impact sur le parc — OBLIGATOIRE, à chaque faille (demande explicite 19/11/2026)
+
+Lire la section « Liste exhaustive des solutions à vérifier » de `company-profile.md` et
+déterminer, pour **chacune** des solutions listées, un statut parmi exactement trois :
+**Impacté** / **Non impacté** / **À vérifier** (jamais déduire "Non impacté" par défaut faute
+d'information — utiliser "À vérifier" dans ce cas, avec la raison). Ce n'est pas optionnel même
+si la faille semble clairement hors-sujet pour la plupart des solutions (ex. une faille PHP
+touche directement PHP, probablement Odoo/Nextcloud s'ils en dépendent, et "Non impacté" pour
+Proxmox/Veeam/Cisco... — le tableau doit quand même exister en entier).
+
+Cette matrice doit apparaître, structurée (pas seulement en prose) :
+- dans `<slug>/vuln.yaml` → nouveau champ `impact:` (voir `docs/FORMAT.md` pour le format exact) ;
+- dans `<slug>/README.md`, sous un titre dédié (ex. « Impact sur nos solutions »), tableau Markdown
+  avec les trois colonnes Solution / Statut / Remarque.
+
+Comme toujours : rien de ceci (le tableau rempli) n'est un problème de confidentialité en soi —
+dire "nginx : Impacté" est une information de sécurité générique, pas une donnée interne. Ce qui
+reste interdit, c'est de copier le contenu brut de `company-profile.md` lui-même (son
+introduction, sa section de priorisation, etc.) dans le dépôt public.
+
 ## 2. Volet public — `/home/thib/Incident_Response_Project/<slug>/`
 
 Crée (ou mets à jour si le dossier existe déjà) un dossier suivant **exactement** les conventions
@@ -114,6 +134,8 @@ du repo (relire un dossier existant, ex. `php2shell/`, avant d'écrire) :
     fichier présent à côté du `vuln.yaml`, pas un chemin d'un autre dossier) ;
   - `results`, `fix`, `references` : uniquement des liens `https://` officiels, jamais de méthode
     d'exploitation (même règle que le README).
+  - **`impact:` — OBLIGATOIRE, voir section 1bis ci-dessus et `docs/FORMAT.md` pour le format
+    exact.** La matrice complète (toutes les solutions de `company-profile.md`, pas un sous-ensemble).
   - **`fix:` — même règle en séquence numérotée que pour le README ci-dessus (voir
     `docs/FORMAT.md` pour le détail complet), à appliquer systématiquement.** L'app IRM affiche
     ce champ directement, sans forcément montrer le README complet : la séquence complète doit
@@ -161,7 +183,7 @@ Relis `/home/thib/Incident_Response_Project/CLAUDE.md` et vérifie en particulie
 mais avec un champ manquant/incohérent est aussi silencieusement ignoré par IRM qu'un fichier
 absent) :
 ```
-python3 -c "import yaml,sys,datetime as d; x=yaml.safe_load(open(sys.argv[1])); assert x['title'] and x['summary'] and x['severity'] in ('critical','high','medium','low') and x['id']==sys.argv[1].split('/')[-2]; d.date.fromisoformat(str(x['published']))" <slug>/vuln.yaml
+python3 -c "import yaml,sys,datetime as d; x=yaml.safe_load(open(sys.argv[1])); assert x['title'] and x['summary'] and x['severity'] in ('critical','high','medium','low') and x['id']==sys.argv[1].split('/')[-2]; d.date.fromisoformat(str(x['published'])); assert x.get('impact') and len(x['impact'])>=20, 'champ impact: manquant ou matrice incomplète (une entrée par solution de company-profile.md)'; assert all(i['status'] in ('impacted','not_impacted','to_check') for i in x['impact']), 'statut impact invalide'" <slug>/vuln.yaml
 ```
 Vérifier aussi que chaque `file:` listé sous `tests:` existe bien dans le dossier (`ls <slug>/`).
 

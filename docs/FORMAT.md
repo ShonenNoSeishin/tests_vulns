@@ -19,6 +19,10 @@ affects: ["Produit et versions", "Autre produit"]
 tags: [ssh, alpine]
 concerned: ["Cas où la machine est concernée"]
 not_concerned: ["Cas où elle ne l'est pas"]
+impact:                             # OBLIGATOIRE : statut sur CHAQUE solution du parc, voir ci-dessous
+  - {product: "Proxmox VE", status: "impacted", note: "Composant touché directement"}
+  - {product: "Veeam", status: "not_impacted"}
+  - {product: "nginx", status: "to_check", note: "Dépend de la version installée, non vérifiée ici"}
 tests:                             # scripts téléchargeables (fichiers du dossier uniquement)
   - os: linux                      # linux | windows | any
     label: "Linux (hôte + conteneurs)"
@@ -36,6 +40,33 @@ references:
 ```
 
 Règles de contenu (dépôt public) : voir `CLAUDE.md` — pas de nom de société, d'hôte ou d'IP internes, pas de méthode d'exploitation, pas de secret.
+
+## Champ `impact:` — matrice d'impact sur le parc (obligatoire depuis le 19/11/2026)
+
+**Demande explicite de l'utilisateur** : chaque fiche doit déclarer explicitement l'impact sur
+**toutes** les solutions suivies (liste tenue à jour dans la section correspondante du contexte
+privé de veille — Proxmox, Docker, LXC, Veeam, Nakivo, 3CX, Elastix, Andrisoft WANGuard, Datalust
+Seq, LibreNMS, Observium, Debian, Ubuntu, Windows 2012/2016/2019/2022/2025, SMB/SFTP sur Debian,
+Cisco, Ubiquiti, HP/Aruba, FortiGate, FortiAnalyzer, FortiManager, Sophos, nginx, Certbot, Odoo,
+Nextcloud, JumpCloud, Python, Django, React, PHP, et MikroTik/Ceph/QEMU-KVM déjà suivis par
+ailleurs). **Jamais un sous-ensemble** : une entrée par solution, même quand le statut est
+trivialement "non impacté".
+
+```yaml
+impact:
+  - {product: "Nom exact de la solution", status: "impacted", note: "Pourquoi (facultatif)"}
+```
+
+- `status` : exactement `impacted` / `not_impacted` / `to_check` (jamais une variante). `to_check`
+  quand l'information manque pour trancher avec certitude — ne jamais mettre `not_impacted` par
+  défaut faute de vérification.
+- `note` : facultatif, utile surtout pour `to_check` (expliquer ce qui manque) ou pour une
+  dépendance indirecte (ex. "Odoo embarque nginx" → impact transitif à documenter).
+- Cette information est **publique sans problème** (dire "nginx : impacted" pour une CVE nginx est
+  une donnée de sécurité générique, pas une donnée interne) — ce qui reste interdit, c'est de
+  copier le contenu brut du fichier privé qui sert de source à cette liste.
+- Le README du dossier doit aussi présenter cette matrice sous forme de tableau Markdown lisible
+  (colonnes Solution / Statut / Remarque), pas seulement dans le YAML.
 
 ## Règle sur `fix:` — ne jamais présenter un correctif qui peut ne rien faire comme suffisant
 
