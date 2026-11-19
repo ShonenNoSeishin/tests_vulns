@@ -1,0 +1,42 @@
+id: proxmox-novembre-2026
+title: "Proxmox VE — lot d'avis de sécurité du 10-12 novembre 2026 (PSA-00088 à 00095)"
+cves: []
+severity: critical
+published: 2026-11-10
+updated: 2026-11-19
+exploited: false
+kev: false
+summary: >-
+  Sept avis de sécurité Proxmox VE (PSA, aucun CVE attribué), dont deux (PSA-2026-00088-1, PSA-2026-00100-1) menant à une exécution de
+  commande en root via une injection shell (nom de volume iSCSI, gestion d'erreur d'upload). Les cinq autres concernent le serveur HTTP
+  interne, l'API SDN, la configuration FRR, l'extraction d'images OCI et les cartes réseau de conteneurs. Aucun n'est une RCE
+  pré-authentification depuis l'extérieur ; tous nécessitent déjà un accès ou un vecteur spécifique.
+affects:
+  - "libpve-storage-perl < 9.1.15 (PSA-00088, PSA-00100)"
+  - "libpve-guest-common-perl < 6.0.7, qemu-server < 9.2.15 (PSA-00088)"
+  - "libpve-http-server-perl < 6.0.6 (PSA-00089)"
+  - "libpve-network-api-perl < 1.6.8 (PSA-00092)"
+  - "libpve-network-perl < 1.6.8, libpve-rs-perl < 0.15.4 (PSA-00093)"
+  - "librust-proxmox-oci-dev < 0.2.2, libpve-rs-perl < 0.15.4 (PSA-00094)"
+  - "pve-container < 6.1.17 (PSA-00095)"
+tags: [proxmox, hyperviseur, pve, perl]
+concerned:
+  - "Vous administrez un nœud Proxmox VE avec au moins un des paquets ci-dessus en version antérieure au seuil corrigé."
+not_concerned:
+  - "Tous les paquets concernés sont déjà aux versions corrigées, ou la machine n'est pas un nœud Proxmox VE (ex. LXC/VM invité — ces avis concernent le plan de gestion de l'hôte)."
+tests:
+  - os: linux
+    label: "Nœud Proxmox VE (lecture seule)"
+    file: test_proxmox-novembre-2026.sh
+    run: "chmod +x test_proxmox-novembre-2026.sh && ./test_proxmox-novembre-2026.sh"
+    note: "À lancer SUR le nœud Proxmox lui-même, pas dans un invité. Interroge uniquement dpkg, ne modifie rien."
+results:
+  - {status: "VULNÉRABLE", meaning: "Au moins un paquet concerné par un avis est antérieur à la version corrigée.", action: "apt update && apt full-upgrade, puis redémarrer les services concernés ou le nœud."}
+  - {status: "À VÉRIFIER", meaning: "Un paquet attendu est absent — souvent le signe que ce n'est pas un nœud Proxmox VE standard.", action: "Vérifier que le script tourne bien sur l'hôte Proxmox, pas dans un invité."}
+  - {status: "CORRIGÉ", meaning: "Tous les paquets concernés par un avis sont à jour.", action: "Rien."}
+fix:
+  - {for: "Tous les avis de ce lot", command: "apt update && apt full-upgrade"}
+fixed_versions: "libpve-storage-perl 9.1.15, libpve-guest-common-perl 6.0.7, qemu-server 9.2.15, libpve-http-server-perl 6.0.6, libpve-network-api-perl 1.6.8, libpve-network-perl 1.6.8, libpve-rs-perl 0.15.4, librust-proxmox-oci-dev 0.2.2, pve-container 6.1.17."
+docs: [README.md]
+references:
+  - {title: "Fil officiel des avis de sécurité Proxmox VE", url: "https://forum.proxmox.com/threads/proxmox-virtual-environment-security-advisories.149331/"}

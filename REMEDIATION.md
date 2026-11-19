@@ -147,6 +147,7 @@ script avec `--scan-images`/`-ScanImages` (sinon une image jamais démarrée res
 | Fortinet novembre 2026 | FortiManager/FortiAnalyzer, API JSON activée, correctif 8.0.3 pas encore publié | [`fortinet-novembre-2026/README.md`](fortinet-novembre-2026/README.md) — "En attendant" | `config system admin profile` / `set rpc-permit none` en attendant le correctif |
 | NGINX2Root (CVE-2026-123007/123633) | nginx en version antérieure aux correctifs (hôte, conteneur ou image) | [`nginx2root/README.md`](nginx2root/README.md) | `apt install --only-upgrade nginx` si déjà disponible, sinon dépôt officiel nginx.org ; voir §1 "Image Docker" si c'est un conteneur |
 | NGINX2Root (CVE-2026-123007/123633) | nginx Plus | [`nginx2root/README.md`](nginx2root/README.md) — "Piège de version" | Comparer manuellement sur le portail support F5, viser 37.0.8.1/37.3.0.1 |
+| Proxmox novembre 2026 (PSA-00088 à 00095) | Nœud Proxmox VE, paquets `pve-*`/`libpve-*` antérieurs aux correctifs | [`proxmox-novembre-2026/README.md`](proxmox-novembre-2026/README.md) | `apt update && apt full-upgrade` (une seule opération couvre les sept avis) |
 
 Dans tous les cas : après toute action, **relancer le script correspondant**
 (`test_php2shell.sh`/`Test-Php2Shell.ps1`, `test_broccoli2shell.sh`/`Test-Broccoli2Shell.ps1`,
