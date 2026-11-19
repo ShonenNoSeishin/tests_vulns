@@ -76,6 +76,46 @@ standard, aucun contournement manuel requis.
   [fil officiel des avis](https://forum.proxmox.com/threads/proxmox-virtual-environment-security-advisories.149331/)
   en cas de doute.
 
+## Impact sur nos solutions
+
+| Solution | Statut | Remarque |
+|---|---|---|
+| Proxmox VE | Impacté | Lot d'avis touchant le plan de gestion de l'hôte (pve-manager, qemu-server, pve-container, libpve-*) |
+| Docker | Non impacté | Ces avis concernent le plan de gestion de l'hôte Proxmox, pas les conteneurs/invités |
+| LXC | Non impacté | Ces avis concernent le plan de gestion de l'hôte Proxmox, pas les LXC invités |
+| Veeam | Non impacté |  |
+| Nakivo | Non impacté |  |
+| 3CX | Non impacté |  |
+| Elastix | Non impacté |  |
+| Andrisoft WANGuard | Non impacté |  |
+| Datalust Seq | Non impacté |  |
+| LibreNMS | Non impacté |  |
+| Observium | Non impacté |  |
+| Debian | Non impacté |  |
+| Ubuntu | Non impacté |  |
+| Windows Server (2012/2016/2019/2022/2025) | Non impacté |  |
+| SMB (Samba, Debian) | Non impacté |  |
+| SFTP (Debian) | Non impacté |  |
+| Cisco | Non impacté |  |
+| Ubiquiti | Non impacté |  |
+| HP/Aruba | Non impacté |  |
+| FortiGate | Non impacté |  |
+| FortiAnalyzer | Non impacté |  |
+| FortiManager | Non impacté |  |
+| Sophos | Non impacté |  |
+| nginx | Non impacté |  |
+| Certbot | Non impacté |  |
+| Odoo (self-hosted) | Non impacté |  |
+| Nextcloud | Non impacté |  |
+| JumpCloud | Non impacté |  |
+| Python | Non impacté |  |
+| Django | Non impacté |  |
+| React | Non impacté |  |
+| PHP | Non impacté |  |
+| MikroTik | Non impacté |  |
+| Ceph | Non impacté | Avis Proxmox VE (pve-manager/libpve-*), pas Ceph lui-même |
+| QEMU-KVM | Non impacté | Avis Proxmox VE (pve-manager/libpve-*), pas QEMU/KVM lui-même |
+
 ## Références
 
 - [Fil officiel des avis de sécurité Proxmox VE](https://forum.proxmox.com/threads/proxmox-virtual-environment-security-advisories.149331/)

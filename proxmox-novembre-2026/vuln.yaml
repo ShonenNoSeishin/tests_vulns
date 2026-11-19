@@ -24,6 +24,42 @@ concerned:
   - "Vous administrez un nœud Proxmox VE avec au moins un des paquets ci-dessus en version antérieure au seuil corrigé."
 not_concerned:
   - "Tous les paquets concernés sont déjà aux versions corrigées, ou la machine n'est pas un nœud Proxmox VE (ex. LXC/VM invité — ces avis concernent le plan de gestion de l'hôte)."
+impact:
+  - {product: "Proxmox VE", status: "impacted", note: "Lot d'avis touchant le plan de gestion de l'hôte (pve-manager, qemu-server, pve-container, libpve-*)"}
+  - {product: "Docker", status: "not_impacted", note: "Ces avis concernent le plan de gestion de l'hôte Proxmox, pas les conteneurs/invités"}
+  - {product: "LXC", status: "not_impacted", note: "Ces avis concernent le plan de gestion de l'hôte Proxmox, pas les LXC invités"}
+  - {product: "Veeam", status: "not_impacted"}
+  - {product: "Nakivo", status: "not_impacted"}
+  - {product: "3CX", status: "not_impacted"}
+  - {product: "Elastix", status: "not_impacted"}
+  - {product: "Andrisoft WANGuard", status: "not_impacted"}
+  - {product: "Datalust Seq", status: "not_impacted"}
+  - {product: "LibreNMS", status: "not_impacted"}
+  - {product: "Observium", status: "not_impacted"}
+  - {product: "Debian", status: "not_impacted"}
+  - {product: "Ubuntu", status: "not_impacted"}
+  - {product: "Windows Server (2012/2016/2019/2022/2025)", status: "not_impacted"}
+  - {product: "SMB (Samba, Debian)", status: "not_impacted"}
+  - {product: "SFTP (Debian)", status: "not_impacted"}
+  - {product: "Cisco", status: "not_impacted"}
+  - {product: "Ubiquiti", status: "not_impacted"}
+  - {product: "HP/Aruba", status: "not_impacted"}
+  - {product: "FortiGate", status: "not_impacted"}
+  - {product: "FortiAnalyzer", status: "not_impacted"}
+  - {product: "FortiManager", status: "not_impacted"}
+  - {product: "Sophos", status: "not_impacted"}
+  - {product: "nginx", status: "not_impacted"}
+  - {product: "Certbot", status: "not_impacted"}
+  - {product: "Odoo (self-hosted)", status: "not_impacted"}
+  - {product: "Nextcloud", status: "not_impacted"}
+  - {product: "JumpCloud", status: "not_impacted"}
+  - {product: "Python", status: "not_impacted"}
+  - {product: "Django", status: "not_impacted"}
+  - {product: "React", status: "not_impacted"}
+  - {product: "PHP", status: "not_impacted"}
+  - {product: "MikroTik", status: "not_impacted"}
+  - {product: "Ceph", status: "not_impacted", note: "Avis Proxmox VE (pve-manager/libpve-*), pas Ceph lui-même"}
+  - {product: "QEMU-KVM", status: "not_impacted", note: "Avis Proxmox VE (pve-manager/libpve-*), pas QEMU/KVM lui-même"}
 tests:
   - os: linux
     label: "Nœud Proxmox VE (lecture seule)"

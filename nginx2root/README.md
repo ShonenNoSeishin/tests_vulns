@@ -163,6 +163,46 @@ Désactiver HTTP/2 réduit l'exposition aux **deux** RCE (pas aux 8 autres CVE d
 - `Test-Nginx2Root.ps1` : par sécurité (éviter qu'un utilisateur non administrateur dépose un faux `nginx.exe` que le script, souvent lancé en administrateur, exécuterait), **seul le `nginx.exe` résolu depuis le PATH de l'opérateur est exécuté**. Un binaire trouvé par recherche sur disque ou appartenant à un processus/service déjà en cours est lu uniquement via ses métadonnées de version (jamais exécuté) — ce qui veut dire que **nginx Plus n'est pas détectable dans ces deux cas** (seule l'exécution via `-V` révèle "Plus" ; un résultat "À VÉRIFIER : version illisible" sur un de ces chemins doit être complété à la main).
 - Les ingress controllers Kubernetes basés sur nginx (`ingress-nginx`, etc.) ne sont pas spécifiquement couverts : le script détecte le binaire nginx si le conteneur est inspectable via `docker`/`podman`, mais un cluster Kubernetes managé nécessite une vérification dédiée (image de l'ingress controller).
 
+## Impact sur nos solutions
+
+| Solution | Statut | Remarque |
+|---|---|---|
+| Proxmox VE | Non impacté | L'interface de gestion Proxmox (pveproxy) n'utilise pas nginx |
+| Docker | À vérifier | Dépend si un conteneur fait tourner nginx en version vulnérable |
+| LXC | À vérifier | Dépend si le conteneur fait tourner nginx en version vulnérable |
+| Veeam | Non impacté |  |
+| Nakivo | Non impacté |  |
+| 3CX | Non impacté |  |
+| Elastix | Non impacté |  |
+| Andrisoft WANGuard | Non impacté |  |
+| Datalust Seq | Non impacté |  |
+| LibreNMS | Non impacté |  |
+| Observium | Non impacté |  |
+| Debian | Non impacté |  |
+| Ubuntu | Non impacté |  |
+| Windows Server (2012/2016/2019/2022/2025) | À vérifier | nginx pour Windows existe, plus rare mais possible |
+| SMB (Samba, Debian) | Non impacté |  |
+| SFTP (Debian) | Non impacté |  |
+| Cisco | Non impacté |  |
+| Ubiquiti | Non impacté |  |
+| HP/Aruba | Non impacté |  |
+| FortiGate | Non impacté |  |
+| FortiAnalyzer | Non impacté |  |
+| FortiManager | Non impacté |  |
+| Sophos | Non impacté |  |
+| nginx | Impacté | Composant directement concerné |
+| Certbot | Non impacté | Certbot lui-même n'est pas nginx, seul son plugin nginx interagit avec -- la faille est dans nginx, pas dans Certbot |
+| Odoo (self-hosted) | À vérifier | Odoo utilise souvent nginx comme reverse-proxy frontal -- à vérifier selon le déploiement |
+| Nextcloud | À vérifier | nginx souvent utilisé comme serveur web devant Nextcloud -- à vérifier selon le déploiement |
+| JumpCloud | Non impacté |  |
+| Python | Non impacté |  |
+| Django | Non impacté |  |
+| React | Non impacté |  |
+| PHP | Non impacté |  |
+| MikroTik | Non impacté |  |
+| Ceph | Non impacté |  |
+| QEMU-KVM | Non impacté |  |
+
 ## Références
 
 - [Avis officiel nginx](https://nginx.org/en/security_advisories.html)

@@ -106,6 +106,46 @@ Le code de sortie du script suit la même logique : `0` = rien à signaler, `1` 
 - `kubectl`/`lxc`/`nerdctl`/`crictl` sont seulement signalés comme présents, pas sondés automatiquement.
 - Sous Windows : la recherche sur disque est bornée aux chemins fournis en paramètre (par défaut XAMPP/WAMP/PHP officiel/IIS) — une installation ailleurs reste invisible ; les conteneurs Windows natifs (non-WSL2) ne sont pas sondés.
 
+## Impact sur nos solutions
+
+| Solution | Statut | Remarque |
+|---|---|---|
+| Proxmox VE | Non impacté |  |
+| Docker | À vérifier | Dépend si un conteneur embarque une version PHP vulnérable |
+| LXC | À vérifier | Dépend si le conteneur embarque une version PHP vulnérable |
+| Veeam | Non impacté |  |
+| Nakivo | Non impacté |  |
+| 3CX | Non impacté |  |
+| Elastix | À vérifier | Distributions PBX type FreePBX embarquent souvent une interface d'administration PHP -- vérifier la version |
+| Andrisoft WANGuard | À vérifier | La console WANGuard a une interface web PHP -- vérifier la version |
+| Datalust Seq | Non impacté |  |
+| LibreNMS | À vérifier | Application PHP -- impact dépend de la version PHP utilisée par l'hôte |
+| Observium | À vérifier | Application PHP -- impact dépend de la version PHP utilisée par l'hôte |
+| Debian | Non impacté | L'OS lui-même n'est pas en cause -- vérifier le paquet PHP installé dessus séparément |
+| Ubuntu | Non impacté | L'OS lui-même n'est pas en cause -- vérifier le paquet PHP installé dessus séparément |
+| Windows Server (2012/2016/2019/2022/2025) | À vérifier | Impacté seulement si IIS+PHP via FastCGI est configuré -- voir Test-Php2Shell.ps1 |
+| SMB (Samba, Debian) | Non impacté |  |
+| SFTP (Debian) | Non impacté |  |
+| Cisco | Non impacté |  |
+| Ubiquiti | Non impacté |  |
+| HP/Aruba | Non impacté |  |
+| FortiGate | Non impacté |  |
+| FortiAnalyzer | Non impacté |  |
+| FortiManager | Non impacté |  |
+| Sophos | Non impacté |  |
+| nginx | Non impacté | nginx lui-même n'est pas écrit en PHP ; vérifier le PHP-FPM derrière, pas nginx |
+| Certbot | Non impacté |  |
+| Odoo (self-hosted) | Non impacté | Odoo est écrit en Python, pas en PHP |
+| Nextcloud | À vérifier | Application PHP -- impact dépend de la version PHP utilisée |
+| JumpCloud | Non impacté |  |
+| Python | Non impacté |  |
+| Django | Non impacté |  |
+| React | Non impacté |  |
+| PHP | Impacté | Moteur directement concerné |
+| MikroTik | Non impacté |  |
+| Ceph | Non impacté |  |
+| QEMU-KVM | Non impacté |  |
+
 ## Références
 
 - [php.net](https://www.php.net/)

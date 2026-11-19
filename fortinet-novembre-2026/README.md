@@ -95,6 +95,46 @@ Ne scannez que vos propres équipements.
 - FortiManager/FortiAnalyzer **Cloud** ont des bornes de version légèrement différentes du on-prem pour FG-IR-26-219 (démarrent à
   .1 au lieu de .0) : non distingué par ce script, toujours vérifier le détail sur l'avis officiel pour une instance Cloud.
 
+## Impact sur nos solutions
+
+| Solution | Statut | Remarque |
+|---|---|---|
+| Proxmox VE | Non impacté |  |
+| Docker | Non impacté |  |
+| LXC | Non impacté |  |
+| Veeam | Non impacté |  |
+| Nakivo | Non impacté |  |
+| 3CX | Non impacté |  |
+| Elastix | Non impacté |  |
+| Andrisoft WANGuard | Non impacté |  |
+| Datalust Seq | Non impacté |  |
+| LibreNMS | Non impacté |  |
+| Observium | Non impacté |  |
+| Debian | Non impacté |  |
+| Ubuntu | Non impacté |  |
+| Windows Server (2012/2016/2019/2022/2025) | Non impacté |  |
+| SMB (Samba, Debian) | Non impacté |  |
+| SFTP (Debian) | Non impacté |  |
+| Cisco | Non impacté |  |
+| Ubiquiti | Non impacté |  |
+| HP/Aruba | Non impacté |  |
+| FortiGate | Impacté | FG-IR-26-267 (OSPF) + lot plus large de novembre 2026 |
+| FortiAnalyzer | Impacté | FG-IR-26-219 (API JRPC) |
+| FortiManager | Impacté | FG-IR-26-275 (FGFM) et FG-IR-26-219 (API JRPC) |
+| Sophos | Non impacté | Avis Fortinet uniquement -- sans rapport avec les produits Sophos |
+| nginx | Non impacté |  |
+| Certbot | Non impacté |  |
+| Odoo (self-hosted) | Non impacté |  |
+| Nextcloud | Non impacté |  |
+| JumpCloud | Non impacté |  |
+| Python | Non impacté |  |
+| Django | Non impacté |  |
+| React | Non impacté |  |
+| PHP | Non impacté |  |
+| MikroTik | Non impacté |  |
+| Ceph | Non impacté |  |
+| QEMU-KVM | Non impacté |  |
+
 ## Références
 
 - [FG-IR-26-275 — FortiManager FGFM](https://www.fortiguard.com/psirt/FG-IR-26-275)

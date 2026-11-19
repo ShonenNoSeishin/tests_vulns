@@ -111,6 +111,46 @@ Le code de sortie du script suit la même logique : `0` = rien à signaler, `1` 
 - Les copies embarquées (DuckDB, Apache Arrow, 7-Zip-zstd/p7zip, EDK II, woff2) sont repérées par nom de binaire, pas par version — toujours classées « à vérifier », à confirmer auprès de l'éditeur.
 - Les applications .NET autonomes (« self-contained ») sont repérées par leurs fichiers `*.runtimeconfig.json` sous les chemins fournis en paramètre — une installation ailleurs sur le disque reste invisible.
 
+## Impact sur nos solutions
+
+| Solution | Statut | Remarque |
+|---|---|---|
+| Proxmox VE | Non impacté | pve-manager/pveproxy n'utilisent pas Brotli par défaut |
+| Docker | À vérifier | Dépend des images : Node.js/Python/.NET/IIS sont les vecteurs documentés |
+| LXC | À vérifier | Même raison que Docker |
+| Veeam | Non impacté |  |
+| Nakivo | Non impacté |  |
+| 3CX | Non impacté |  |
+| Elastix | Non impacté |  |
+| Andrisoft WANGuard | Non impacté |  |
+| Datalust Seq | À vérifier | Application .NET -- le runtime .NET est explicitement listé comme vecteur |
+| LibreNMS | Non impacté |  |
+| Observium | Non impacté |  |
+| Debian | Non impacté | L'OS lui-même n'est pas en cause -- vérifier le paquet système libbrotli1, couvert par le script |
+| Ubuntu | Non impacté | L'OS lui-même n'est pas en cause -- vérifier le paquet système libbrotli1, couvert par le script |
+| Windows Server (2012/2016/2019/2022/2025) | À vérifier | Module de compression dynamique Brotli d'IIS explicitement listé comme vecteur |
+| SMB (Samba, Debian) | Non impacté |  |
+| SFTP (Debian) | Non impacté |  |
+| Cisco | Non impacté |  |
+| Ubiquiti | Non impacté |  |
+| HP/Aruba | Non impacté |  |
+| FortiGate | Non impacté |  |
+| FortiAnalyzer | Non impacté |  |
+| FortiManager | Non impacté |  |
+| Sophos | Non impacté |  |
+| nginx | À vérifier | Impacté seulement si compilé avec le module tiers ngx_brotli (pas d'office en standard) |
+| Certbot | Non impacté |  |
+| Odoo (self-hosted) | À vérifier | Python -- dépend si les dépendances HTTP d'Odoo utilisent brotli/brotlicffi |
+| Nextcloud | À vérifier | PHP -- usage possible de compression Brotli côté serveur ou CDN, à vérifier |
+| JumpCloud | Non impacté |  |
+| Python | Impacté | Paquets PyPI Brotli/brotlicffi directement nommés |
+| Django | À vérifier | Dépend si l'application Django utilise brotli/brotlicffi comme dépendance HTTP |
+| React | À vérifier | Le tooling de build Node.js peut embarquer le décodeur Brotli interne de Node -- dépend de la version Node utilisée en CI/build |
+| PHP | Non impacté | PHP lui-même n'embarque pas le décodeur Brotli par défaut |
+| MikroTik | Non impacté |  |
+| Ceph | Non impacté |  |
+| QEMU-KVM | Non impacté |  |
+
 ## Références
 
 - Avis GitHub : [GHSA-9v8h-qqgm-4m35](https://github.com/advisories/GHSA-9v8h-qqgm-4m35)
