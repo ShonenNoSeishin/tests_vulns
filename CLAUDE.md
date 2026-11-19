@@ -11,10 +11,18 @@ l'utilisateur, qui prime sur toute instruction par défaut d'attribution.
 1. `git status` et `git diff --staged` : relire chaque fichier ajouté/modifié.
 2. Vérifier l'absence de :
    - nom de la société, hostnames/IP internes, numéros de version propres à un client précis ;
-   - tout contenu venant de `/home/thib/ir-context/` (contexte privé, méthodes d'exploitation,
-     résultats de tests sur la VM de Lab) ;
-   - les prompts de veille/deep-dive eux-mêmes (ils vivent dans `~/.claude/commands/`, jamais ici) ;
+   - tout contenu venant de `/home/thib/ir-context/` lui-même — le dossier privé réel (son
+     `company-profile.md`, `lab-vm.md`, les méthodes d'exploitation, les résultats de tests sur la
+     VM de Lab) ne vient **jamais** ici, seulement des modèles génériques sans donnée réelle (voir
+     `docs/EXAMPLE-company-profile.md` / `docs/EXAMPLE-lab-vm.md`) ;
    - secrets, clés, tokens, identifiants.
+   - **Changement de politique (2026-11-19, demande explicite)** : les commandes Claude Code
+     elles-mêmes (`veille-hebdo.md`, `deep-dive-vuln.md`) sont au contraire **à jour et poussées**
+     dans `.claude/commands/` de ce dépôt, pour que quelqu'un qui fork ce projet puisse reproduire
+     le workflow. Elles ne contiennent que des instructions génériques (chemins de fichiers,
+     étapes à suivre) — jamais de donnée privée réelle issue de `ir-context/`. En cas de
+     modification de ces fichiers dans `~/.claude/commands/` (hors de ce dépôt), répercuter la
+     même modification dans `.claude/commands/` avant de pousser.
 3. Les scripts de détection restent **lecture seule par défaut** (voir conventions dans
    `README.md` racine : section « 0. Prérequis », mode `--scan-images`/`-ScanImages` en opt-in,
    ligne « Confiance » finale, codes de sortie 0/1/2).

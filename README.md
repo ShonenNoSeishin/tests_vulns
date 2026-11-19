@@ -86,6 +86,15 @@ Le code de sortie suit la même logique (`0` = rien à signaler, `1` = à vérif
 - Chaque `README.md` de dossier liste les limites spécifiques à sa faille (distributions non couvertes, copies embarquées non versionnées, etc.).
 - Aucun de ces scripts ne doit être pointé contre une machine qui n'est pas la vôtre ou que vous n'êtes pas autorisé à auditer.
 
+## Reproduire le workflow (Claude Code)
+
+Ce dépôt est maintenu avec deux commandes [Claude Code](https://claude.com/claude-code), versionnées dans [`.claude/commands/`](.claude/commands/) :
+
+- **`/veille-hebdo`** — veille hebdomadaire des failles importantes, classées par priorité pour votre parc.
+- **`/deep-dive-vuln <CVE>`** — analyse une faille en détail, crée le dossier public de détection de ce dépôt (scripts + README + `vuln.yaml`) et, dans un dossier privé séparé, la méthode d'exploitation et les résultats de test.
+
+Les deux lisent un contexte privé (parc machines, priorités, machine de labo) qui n'est **jamais** dans ce dépôt — voir les modèles [`docs/EXAMPLE-company-profile.md`](docs/EXAMPLE-company-profile.md) et [`docs/EXAMPLE-lab-vm.md`](docs/EXAMPLE-lab-vm.md) pour reproduire avec votre propre contexte. Les chemins absolus dans les commandes sont ceux de l'installation d'origine : à adapter à la vôtre.
+
 ## Ajouter une nouvelle faille
 
 Modèle prêt à copier : [`docs/TEMPLATE.md`](docs/TEMPLATE.md) (article) et [`docs/FORMAT.md`](docs/FORMAT.md) (`vuln.yaml`).
