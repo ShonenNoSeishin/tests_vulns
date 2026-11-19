@@ -56,6 +56,19 @@ du repo (relire un dossier existant, ex. `php2shell/`, avant d'écrire) :
     `[À VÉRIFIER]`, jamais `[OK]` par défaut ;
   - comparaison contre la **version réellement patchée par le fournisseur/distro** (pas l'upstream
     brut) pour éviter les **faux positifs** sur une version backportée ;
+  - **si une table de rétroportage distro/paquet est utilisée (ex. codename Ubuntu/Debian, nom de
+    paquet géré par un gestionnaire de paquets) : vérifier que cette métadonnée décrit VRAIMENT
+    l'artefact sondé avant de conclure `[CORRIGÉ]` ou `[NON CONCERNÉ]`** — ex. `dpkg -S
+    <chemin_du_binaire>` doit résoudre vers le paquet dont on lit la version, pas juste être
+    présent sur le système. **Deux vrais bugs trouvés par revue sécu automatique** sur
+    `nginx2root/test_nginx2root.sh` le 19/11/2026 (corrigés en commit `ceaf72c`) : (1) la table
+    Ubuntu était utilisée sans vérifier que le binaire nginx trouvé appartenait vraiment au paquet
+    système lu — un nginx compilé à la main et placé en tête du PATH aurait été couvert à tort par
+    le paquet apt patché ; (2) un codename (`trusty`) déclenchait un `[NON CONCERNÉ]`
+    inconditionnel sans vérifier la version du binaire réellement trouvé. **Ne jamais conclure
+    `[CORRIGÉ]`/`[NON CONCERNÉ]` sur la seule foi d'une métadonnée de contexte (nom de distro,
+    codename...) sans vérification croisée avec l'élément réellement trouvé** — en cas de doute,
+    retomber sur la comparaison de version brute de l'artefact, jamais sur le nom de la distro ;
   - une ligne par élément détecté (`[VULNÉRABLE]` / `[À VÉRIFIER]` / `[CORRIGÉ]`/`[OK]` /
     `[NON CONCERNÉ]`) ;
   - ligne finale « Confiance » (COMPLÈTE / PARTIELLE / INCOMPLÈTE / vulnérable confirmé) ;

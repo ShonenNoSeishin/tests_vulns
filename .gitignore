@@ -1,0 +1,3 @@
+# Fichiers runtime locaux de Claude Code — jamais partagés entre collaborateurs.
+.claude/scheduled_tasks.lock
+.claude/settings.local.json
