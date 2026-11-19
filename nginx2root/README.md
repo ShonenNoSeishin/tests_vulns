@@ -30,19 +30,40 @@ Un instantané public (Shodan, 10/11/2026, avant correctif) indiquait que **98,9
 | nginx Plus | CVE-2026-123007 | R33, 37.0.0 → 37.2.x | 37.0.8.1 / 37.3.0.1 |
 | nginx Plus | CVE-2026-123633 | R33, 37.0.0 → 37.2.x | 37.0.7.1 / 37.2.0.1 |
 
-> ⚠️ **Piège de version — à l'inverse de PHP2Shell, et confirmé en conditions réelles** : il
-> n'existe **aucun rétroportage distro à ce jour** (vérifié sur `security-tracker.debian.org` et
-> `ubuntu.com/security/notices` le 19/11/2026 — Debian liste toujours `trixie` **« vulnerable »**
-> pour `CVE-2026-123007`/`CVE-2026-123633`, y compris pour le paquet de sécurité
-> `1.26.3-3+deb13u10`, seul `sid` est corrigé). **Conséquence vécue** : sur une machine réelle avec
-> ce paquet installé, `apt update && apt install --only-upgrade nginx` répond
-> `nginx is already the newest version` — **ce message ne veut dire que « c'est la version la
-> plus récente disponible dans vos dépôts », jamais « c'est corrigé »**. Un technicien qui s'arrête
-> à ce message reste vulnérable sans le savoir. Le numéro de version brut rendu par `nginx -v`
-> reste la seule source fiable : une version < 1.30.7/1.31.9 est réellement vulnérable, quel que
-> soit ce que dit le gestionnaire de paquets. **Si un USN/DSA sort plus tard avec un rétroportage**,
-> ce script devra être mis à jour avec une table de correspondance (sur le modèle de celle de
-> `php2shell/README.md`) — repasser le script après chaque mise à jour de sécurité en attendant.
+> ⚠️ **Piège de version, dans les DEUX sens — Debian et Ubuntu divergent sur cette faille** :
+>
+> - **Debian** : **aucun rétroportage à ce jour** (vérifié sur `security-tracker.debian.org` le
+>   19/11/2026 — `trixie` et `bookworm` toujours **« vulnerable »**, y compris le paquet de
+>   sécurité `1.26.3-3+deb13u10`, seul `sid` est corrigé). Un `apt install --only-upgrade nginx`
+>   répond `nginx is already the newest version` — **ce message ne veut dire que « c'est la
+>   version la plus récente disponible dans vos dépôts », jamais « c'est corrigé »**. Confirmé en
+>   conditions réelles. Le numéro de version brut rendu par `nginx -v` reste fiable pour Debian :
+>   une version < 1.30.7/1.31.9 est réellement vulnérable.
+> - **Ubuntu** : Canonical a publié **USN-9159-1 le 19/11/2026**, qui corrige les deux CVE sur
+>   **toutes** les versions supportées (16.04 à 26.10). **Mais le correctif est rétroporté SANS
+>   changer le numéro de version amont** (ex. Ubuntu 22.04 "corrigé" reste `nginx/1.18.0` côté
+>   `nginx -v` — seul le suffixe de paquet dpkg change, `1.18.0-6ubuntu14.23`). **Sur Ubuntu, le
+>   numéro de version brut rendu par `nginx -v` est donc trompeur dans l'AUTRE sens** : il peut
+>   afficher une version qui a l'air ancienne alors que c'est corrigé. Le script compare le
+>   **paquet dpkg** à la table ci-dessous pour Ubuntu, jamais `nginx -v` seul.
+>
+> | Ubuntu (codename) | Paquet nginx corrigé (USN-9159-1) | Remarque |
+> |---|---|---|
+> | 26.10 (stonking) | `1.30.4-7ubuntu1.2` | |
+> | 26.04 LTS (resolute) | `1.28.3-2ubuntu1.13` | |
+> | 24.04 LTS (noble) | `1.24.0-2ubuntu7.20` | |
+> | 22.04 LTS (jammy) | `1.18.0-6ubuntu14.23` | |
+> | 20.04 LTS (focal) | `1.18.0-0ubuntu1.7+esm5` | **Ubuntu Pro/ESM requis** |
+> | 18.04 LTS (bionic) | `1.14.0-0ubuntu1.11+esm6` | **Ubuntu Pro/ESM requis** |
+> | 16.04 LTS (xenial) | `1.10.3-0ubuntu0.16.04.5+esm11` | **Ubuntu Pro (Legacy Support) requis** |
+> | 14.04 LTS (trusty) | — | Non affecté selon Canonical |
+>
+> Validé en conditions réelles le 19/11/2026 : Ubuntu 22.04 avec `nginx` installé depuis les
+> dépôts du jour ressort bien `[CORRIGÉ]` (paquet `1.18.0-6ubuntu14.23`) malgré `nginx -v` affichant
+> `1.18.0` ; un Debian 13 installé de la même façon ressort `[VULNÉRABLE]` (paquet
+> `1.26.3-3+deb13u10`). **Si Debian publie un rétroportage plus tard**, ce script devra être mis à
+> jour avec une table équivalente — repasser le script après chaque mise à jour de sécurité en
+> attendant.
 >
 > **nginx Plus** n'est pas comparé automatiquement : sa numérotation (ex. `37.0.8.1`) ne se compare pas directement aux versions open source. Le script le signale en `[À VÉRIFIER]` plutôt que de risquer un faux résultat — comparer manuellement sur le portail support F5.
 
@@ -71,9 +92,15 @@ chmod +x test_nginx2root.sh
 
 ## Procédure de correction — Debian/Ubuntu (reverse-proxy, serveur web)
 
+**Ubuntu : l'étape 1 suffit, Canonical a déjà publié le correctif (USN-9159-1, 19/11/2026).** Pas
+besoin de la bascule `nginx.org` ci-dessous — `apt update && apt install --only-upgrade nginx`
+suffit (le script compare le **paquet dpkg**, pas `nginx -v`, donc il confirmera `[CORRIGÉ]`
+correctement même si `nginx -v` continue d'afficher un numéro qui semble ancien). **Debian n'a
+toujours aucun correctif à ce jour** : pour Debian, suivre les 4 étapes ci-dessous en entier.
+
 **Action L1, en 4 étapes — ne pas s'arrêter avant l'étape 4 :**
 
-**Étape 1 — tenter la mise à jour standard du paquet distro** (rapide, sans risque, mais pas garantie de corriger quoi que ce soit) :
+**Étape 1 — tenter la mise à jour standard du paquet distro** (rapide, sans risque) :
 ```bash
 apt update && apt install --only-upgrade nginx
 ```
@@ -82,9 +109,9 @@ apt update && apt install --only-upgrade nginx
 ```bash
 ./test_nginx2root.sh
 ```
-Si le résultat affiche encore `[VULNÉRABLE]` (version < 1.30.7/1.31.9) : **l'étape 1 n'a rien corrigé**, passer à l'étape 3. Un message `nginx is already the newest version` **ne prouve pas** que c'est corrigé — il veut dire « c'est la version la plus récente disponible dans vos dépôts actuels », pas « c'est la version corrigeant cette CVE ». C'est exactement le cas au 19/11/2026 : Debian et Ubuntu n'ont encore publié aucun correctif pour ces CVE précises (vérifié sur `security-tracker.debian.org`/`ubuntu.com/security/notices`).
+Si le résultat affiche encore `[VULNÉRABLE]` : **l'étape 1 n'a rien corrigé**, passer à l'étape 3. Un message `nginx is already the newest version` **ne prouve pas** que c'est corrigé — il veut dire « c'est la version la plus récente disponible dans vos dépôts actuels ». C'est le cas pour **Debian** au 19/11/2026 (aucun correctif publié, vérifié sur `security-tracker.debian.org`).
 
-**Étape 3 — si toujours vulnérable après l'étape 2 : basculer sur le dépôt officiel `nginx.org`** (fonctionne dès aujourd'hui) :
+**Étape 3 — Debian seulement, si toujours vulnérable après l'étape 2 : basculer sur le dépôt officiel `nginx.org`** (fonctionne dès aujourd'hui) :
 ```bash
 sudo apt install -y curl gnupg2 ca-certificates lsb-release debian-archive-keyring
 curl https://nginx.org/keys/nginx_signing.key | gpg --dearmor | sudo tee /usr/share/keyrings/nginx-archive-keyring.gpg >/dev/null

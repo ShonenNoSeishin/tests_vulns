@@ -30,10 +30,31 @@ get() { printf '%s\n' "$1" | sed -n "s/^$2=//p" | head -n1; }
 VULN=0; UNK=0; OK=0; NC=0
 FINDINGS=()
 
+# Version de paquet nginx corrigée par CODENAME Ubuntu (USN-9159-1, publié le 19/11/2026).
+# IMPORTANT : Ubuntu rétroporte sans changer le numéro de version amont (ex. 22.04 "corrigé"
+# reste nginx/1.18.0 côté `nginx -v`, seul le suffixe de paquet change) -- comparer le NUMÉRO DE
+# PAQUET dpkg à cette table, jamais le numéro de version amont brut, sous peine de FAUX POSITIF
+# sur un Ubuntu déjà corrigé. $1 = codename (ex. jammy) -> version de paquet corrigée, vide si
+# codename non reconnu par ce script (ne pas confondre avec "non affecté", voir trusty ci-dessous).
+ubuntu_fixed() {
+  case "$1" in
+    stonking) echo "1.30.4-7ubuntu1.2" ;;             # 26.10
+    resolute) echo "1.28.3-2ubuntu1.13" ;;             # 26.04 LTS
+    noble)    echo "1.24.0-2ubuntu7.20" ;;             # 24.04 LTS
+    jammy)    echo "1.18.0-6ubuntu14.23" ;;            # 22.04 LTS
+    focal)    echo "1.18.0-0ubuntu1.7+esm5" ;;         # 20.04 LTS -- nécessite Ubuntu Pro/ESM
+    bionic)   echo "1.14.0-0ubuntu1.11+esm6" ;;        # 18.04 LTS -- nécessite Ubuntu Pro/ESM
+    xenial)   echo "1.10.3-0ubuntu0.16.04.5+esm11" ;;  # 16.04 LTS -- nécessite Ubuntu Pro (Legacy Support)
+    *) echo "" ;;
+  esac
+}
+
 # Branche 1.30 (stable) corrigée à partir de .7 ; branche 1.31 (mainline) corrigée à partir de .9.
 # Toute branche < 1.30 (1.9.5 -> 1.29.x) est dans la plage affectée des deux CVE et n'a plus de
 # correctif amont dédié (branches non maintenues) : traitée comme vulnérable. Toute branche > 1.31
 # est postérieure à cet avis et supposée saine (à confirmer si un nouvel avis sort depuis).
+# UTILISÉE UNIQUEMENT quand aucune table de rétroportage distro ne s'applique (voir ubuntu_fixed
+# ci-dessus) -- reste correcte pour Debian, qui n'a aucun rétroportage à ce jour (voir README).
 # $1 = version "X.Y.Z" -> "vuln" / "ok" / "unk"
 ver_fixed_branch() {
   local v="$1" maj min pat
@@ -79,6 +100,13 @@ if cfgdump=$("$nginx_bin" -T 2>/dev/null); then
   fi
 fi
 echo "http2cfg=$http2cfg"
+osid=""; oscodename=""
+if [ -r /etc/os-release ]; then
+  osid=$(sed -n "s/^ID=//p" /etc/os-release | tr -d "\"" | head -n1)
+  oscodename=$(sed -n "s/^VERSION_CODENAME=//p" /etc/os-release | tr -d "\"" | head -n1)
+fi
+echo "osid=$osid"
+echo "oscodename=$oscodename"
 pkgver=""
 if command -v dpkg-query >/dev/null 2>&1; then
   pkgver=$(dpkg-query -W -f="\${Version}\n" nginx nginx-core nginx-light nginx-full nginx-extras 2>/dev/null | grep -v "^$" | head -n1)
@@ -93,11 +121,12 @@ echo "pkgver=${pkgver:-}"
 '
 
 analyse() { # $1 = libellé, $2 = sortie du PROBE
-  local label="$1" out="$2" present ver plus http2mod http2cfg pkgver status
+  local label="$1" out="$2" present ver plus http2mod http2cfg pkgver osid oscodename status ubfixed
   present=$(get "$out" nginx)
   if [ "$present" != "present" ]; then printf '  [NON CONCERNÉ] %s : pas de nginx\n' "$label"; NC=$((NC+1)); return; fi
   ver=$(get "$out" ver); plus=$(get "$out" plus); http2mod=$(get "$out" http2mod)
   http2cfg=$(get "$out" http2cfg); pkgver=$(get "$out" pkgver)
+  osid=$(get "$out" osid); oscodename=$(get "$out" oscodename)
 
   if [ "$plus" = "yes" ]; then
     UNK=$((UNK+1)); FINDINGS+=("$label")
@@ -107,6 +136,41 @@ analyse() { # $1 = libellé, $2 = sortie du PROBE
     printf '      >= 37.0.7.1/37.2.0.1 (CVE-2026-123633)\n'
     return
   fi
+
+  # Ubuntu : rétroportage sans changer le numéro de version amont -- comparer le paquet dpkg à la
+  # table USN-9159-1, jamais `nginx -v`, sous peine de faux positif sur un système déjà corrigé.
+  if [ "$osid" = "ubuntu" ]; then
+    if [ "$oscodename" = "trusty" ]; then
+      OK=$((OK+1)); printf '  [NON CONCERNÉ] %s : Ubuntu 14.04 (trusty), non affecté par cet avis selon Canonical\n' "$label"
+      return
+    fi
+    ubfixed=$(ubuntu_fixed "$oscodename")
+    if [ -z "$ubfixed" ]; then
+      UNK=$((UNK+1)); FINDINGS+=("$label")
+      printf '  [À VÉRIFIER] %s : Ubuntu "%s" non reconnu par ce script -- comparer manuellement à https://ubuntu.com/security/notices/USN-9159-1\n' "$label" "${oscodename:-codename illisible}"
+      return
+    fi
+    if [ -z "$pkgver" ]; then
+      UNK=$((UNK+1)); FINDINGS+=("$label")
+      printf '  [À VÉRIFIER] %s : Ubuntu %s mais paquet nginx introuvable via dpkg-query (installation non standard ?)\n' "$label" "$oscodename"
+      return
+    fi
+    if have dpkg; then
+      if dpkg --compare-versions "$pkgver" lt "$ubfixed"; then
+        VULN=$((VULN+1)); FINDINGS+=("$label")
+        printf '  [VULNÉRABLE] %s : Ubuntu %s, paquet nginx %s (< %s selon USN-9159-1)\n' "$label" "$oscodename" "$pkgver" "$ubfixed"
+        case "$oscodename" in focal|bionic|xenial) printf '      branche en ESM : ce correctif nécessite un abonnement Ubuntu Pro actif pour être reçu\n' ;; esac
+      else
+        OK=$((OK+1))
+        printf '  [CORRIGÉ] %s : Ubuntu %s, paquet nginx %s (>= %s selon USN-9159-1)\n' "$label" "$oscodename" "$pkgver" "$ubfixed"
+      fi
+      return
+    fi
+    UNK=$((UNK+1)); FINDINGS+=("$label")
+    printf '  [À VÉRIFIER] %s : Ubuntu %s, mais la commande "dpkg" (comparaison de version) est absente sur CETTE machine -- impossible de comparer %s à %s de façon fiable\n' "$label" "$oscodename" "$pkgver" "$ubfixed"
+    return
+  fi
+
   if [ -z "$ver" ]; then
     UNK=$((UNK+1)); FINDINGS+=("$label")
     printf '  [À VÉRIFIER] %s : nginx présent mais version illisible (relancer en root ?)\n' "$label"
@@ -120,7 +184,7 @@ analyse() { # $1 = libellé, $2 = sortie du PROBE
       printf '  [VULNÉRABLE] %s : nginx %s (< 1.30.7 / < 1.31.9) — CVE-2026-123007/123633 (RCE non authentifiée)\n' "$label" "$ver"
       printf '      + 8 autres CVE du lot du 18/11/2026, dont certaines sans rapport avec HTTP/2 : patcher quand même\n'
       printf '      module HTTP/2 compilé : %s ; activé dans la config lue (best-effort) : %s\n' "$http2mod" "$http2cfg"
-      [ -n "$pkgver" ] && printf '      paquet système détecté : %s (aucun rétroportage distro connu à ce jour, voir README)\n' "$pkgver"
+      [ -n "$pkgver" ] && printf '      paquet système détecté : %s (aucun rétroportage Debian connu à ce jour, voir README)\n' "$pkgver"
       ;;
     ok)
       OK=$((OK+1))

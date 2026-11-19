@@ -8,9 +8,10 @@ exploited: false
 kev: false
 summary: >-
   Deux failles critiques (CVSS 9.2) dans le contrôle de flux HTTP/2 de nginx permettent une exécution de code à distance sans
-  authentification. CVE-2026-123007 est présente depuis 2015 ; un PoC public existe. Correctif du 18/11/2026, confirmé encore ABSENT
-  des dépôts Debian/Ubuntu au 19/11/2026 : après un simple 'apt install --only-upgrade nginx', revérifier avec le script -- si toujours
-  vulnérable, basculer sur le dépôt officiel nginx.org (étapes dans la correction).
+  authentification. CVE-2026-123007 est présente depuis 2015 ; un PoC public existe. Correctif du 18/11/2026 : Ubuntu l'a rétroporté le
+  19/11/2026 (USN-9159-1, sans changer le numéro de version amont -- le script compare le paquet dpkg) ; Debian n'a toujours aucun
+  correctif -- après un simple 'apt install --only-upgrade nginx', revérifier avec le script, et si toujours vulnérable basculer sur le
+  dépôt officiel nginx.org.
 affects:
   - "nginx open source < 1.30.7 (stable) ou < 1.31.9 (mainline)"
   - "nginx Plus < 37.0.8.1 / 37.3.0.1 (CVE-2026-123007) ou < 37.0.7.1 / 37.2.0.1 (CVE-2026-123633)"
@@ -28,8 +29,8 @@ results:
   - {status: "CORRIGÉ", meaning: "Version >= 1.30.7 ou >= 1.31.9.", action: "Rien."}
 fix:
   - {for: "Étape 1 -- Debian/Ubuntu, tenter la mise à jour standard", command: "apt update && apt install --only-upgrade nginx"}
-  - {for: "Étape 2 -- OBLIGATOIRE, vérifier que l'étape 1 a réellement corrigé", command: "Relancer test_nginx2root.sh / Test-Nginx2Root.ps1. Si le résultat affiche encore [VULNÉRABLE] (version < 1.30.7/1.31.9), l'étape 1 n'a RIEN corrigé -- passer à l'étape 3. Un message apt 'already the newest version' ne prouve PAS que c'est corrigé : il veut juste dire 'la plus récente disponible dans vos dépôts actuels'."}
-  - {for: "Étape 3 -- SI toujours [VULNÉRABLE] après l'étape 2 : basculer sur le dépôt officiel nginx.org", command: 'sudo apt install -y curl gnupg2 ca-certificates lsb-release debian-archive-keyring && curl https://nginx.org/keys/nginx_signing.key | gpg --dearmor | sudo tee /usr/share/keyrings/nginx-archive-keyring.gpg >/dev/null && echo "deb [signed-by=/usr/share/keyrings/nginx-archive-keyring.gpg] https://nginx.org/packages/debian $(lsb_release -cs) nginx" | sudo tee /etc/apt/sources.list.d/nginx.list && printf "Package: *\nPin: origin nginx.org\nPin: release o=nginx\nPin-Priority: 900\n" | sudo tee /etc/apt/preferences.d/99nginx && sudo apt update && sudo apt install nginx && sudo systemctl restart nginx'}
+  - {for: "Étape 2 -- OBLIGATOIRE, vérifier que l'étape 1 a réellement corrigé", command: "Relancer test_nginx2root.sh / Test-Nginx2Root.ps1. Sur Ubuntu, l'étape 1 suffit (USN-9159-1 du 19/11/2026) : le script compare le paquet dpkg, pas nginx -v, donc [CORRIGÉ] s'affichera correctement même si nginx -v semble ancien. Sur Debian, si le résultat affiche encore [VULNÉRABLE], l'étape 1 n'a RIEN corrigé (aucun correctif Debian à ce jour) -- passer à l'étape 3. 'already the newest version' ne prouve PAS que c'est corrigé."}
+  - {for: "Étape 3 -- Debian seulement, SI toujours [VULNÉRABLE] après l'étape 2 : basculer sur le dépôt officiel nginx.org", command: 'sudo apt install -y curl gnupg2 ca-certificates lsb-release debian-archive-keyring && curl https://nginx.org/keys/nginx_signing.key | gpg --dearmor | sudo tee /usr/share/keyrings/nginx-archive-keyring.gpg >/dev/null && echo "deb [signed-by=/usr/share/keyrings/nginx-archive-keyring.gpg] https://nginx.org/packages/debian $(lsb_release -cs) nginx" | sudo tee /etc/apt/sources.list.d/nginx.list && printf "Package: *\nPin: origin nginx.org\nPin: release o=nginx\nPin-Priority: 900\n" | sudo tee /etc/apt/preferences.d/99nginx && sudo apt update && sudo apt install nginx && sudo systemctl restart nginx'}
   - {for: "Alpine", command: "apk update && apk upgrade nginx"}
   - {for: "Image Docker officielle", command: "docker pull nginx:<tag-reconstruit> && docker compose up -d --force-recreate"}
   - {for: "Contournement temporaire en attendant (HTTP/2 seulement, ne couvre pas les 8 autres CVE du lot)", command: "Retirer le paramètre http2 des directives listen, ou http2 off; puis nginx -s reload"}
