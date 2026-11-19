@@ -9,6 +9,13 @@
   (installeur officiel, service Windows), les processus/services actifs, et les conteneurs
   Docker Desktop (WSL2/Linux, même sonde que la version bash/Linux).
 
+  SÉCURITÉ : seul le nginx.exe résolu depuis le PATH de l'opérateur (section 1) est exécuté
+  (`-v`/`-V`). Un binaire trouvé par recherche sur disque (section 2) ou appartenant à un
+  processus/service déjà en cours (section 3) n'est JAMAIS exécuté -- uniquement lu via ses
+  métadonnées de version Win32 ou une recherche de chaîne dans ses octets -- pour qu'un
+  utilisateur non administrateur ne puisse pas faire exécuter un faux binaire déposé dans un
+  dossier scanné (ex. C:\nginx) par ce script, souvent lancé en administrateur.
+
   DEUX MODES :
     - Lecture seule (PAR DÉFAUT) : inspecte l'hôte et exécute une commande de lecture dans les
       conteneurs Docker Desktop DÉJÀ EN COURS D'EXÉCUTION (docker exec). Ne crée, ne démarre, ne
@@ -118,9 +125,10 @@ function Add-NginxVersionFinding {
 }
 
 function Get-NginxInfoFromExe {
-  # EXÉCUTION réservée au nginx.exe résolu depuis le PATH de l'opérateur ou un service/processus
-  # déjà en cours (même frontière de confiance qu'ailleurs dans ce dépôt) -- jamais sur un binaire
-  # trouvé par une simple recherche sur disque non vérifiée.
+  # EXÉCUTION réservée au nginx.exe résolu depuis le PATH de l'opérateur (section 1 ci-dessous) --
+  # même frontière de confiance que docker.exe/node.exe ailleurs dans ce dépôt. JAMAIS sur un
+  # binaire trouvé par recherche sur disque ou par un processus/service déjà en cours : voir
+  # Get-NginxVersionStatic, qui couvre ces deux cas sans rien exécuter.
   param([string]$ExePath)
   $result = @{ Version = $null; IsPlus = $false }
   try {
@@ -130,6 +138,29 @@ function Get-NginxInfoFromExe {
     if ($Vline -match '(?i)plus') { $result.IsPlus = $true }
   } catch {}
   return $result
+}
+
+function Get-NginxVersionStatic {
+  # Lecture de version SANS exécution, pour un binaire trouvé par recherche sur disque (section 2)
+  # ou appartenant à un processus/service déjà en cours (section 3) : un utilisateur local sans
+  # droits pourrait sinon déposer un faux nginx.exe (ex. sous C:\nginx, souvent accessible en
+  # écriture) que ce script -- lancé en administrateur -- exécuterait pour lui. Même principe que
+  # Get-PhpVersionStatic dans php2shell/Test-Php2Shell.ps1 : jamais d'exécution sur un chemin non
+  # vérifié, seulement les métadonnées de version Win32 embarquées dans le binaire, ou une
+  # recherche de la chaîne littérale "nginx/X.Y.Z" dans ses octets si les métadonnées sont
+  # absentes (nginx ne renseigne pas toujours la ressource de version Win32).
+  param([string]$ExePath)
+  try {
+    $fv = (Get-Item -LiteralPath $ExePath -ErrorAction Stop).VersionInfo
+    if ($fv.ProductVersion -and $fv.ProductVersion -match '\d+\.\d+\.\d+') { return $Matches[0] }
+    if ($fv.FileVersion -and $fv.FileVersion -match '\d+\.\d+\.\d+') { return $Matches[0] }
+  } catch {}
+  try {
+    $bytes = [System.IO.File]::ReadAllBytes($ExePath)
+    $text = [System.Text.Encoding]::ASCII.GetString($bytes)
+    if ($text -match 'nginx/(\d+\.\d+\.\d+)') { return $Matches[1] }
+  } catch {}
+  return $null
 }
 
 # ============================================================
@@ -156,9 +187,9 @@ if (-not $Fast) {
   if ($nginxBins) {
     foreach ($b in $nginxBins) {
       Write-Host "  $($b.FullName)"
-      $info = Get-NginxInfoFromExe $b.FullName
-      if ($info.Version) { Add-NginxVersionFinding $info.Version $b.FullName $info.IsPlus }
-      else { Add-Finding UNKNOWN "$($b.FullName) : version indéterminée (exécution impossible ou sortie inattendue) — vérifier manuellement." }
+      $ver = Get-NginxVersionStatic $b.FullName
+      if ($ver) { Add-NginxVersionFinding $ver $b.FullName $false }
+      else { Add-Finding UNKNOWN "$($b.FullName) : version illisible statiquement (ni métadonnée Win32, ni chaîne 'nginx/X.Y.Z' trouvée dans le binaire) ; non exécuté par sécurité -- vérifier manuellement, par ex. en exécutant '& `"$($b.FullName)`" -v' depuis une session de confiance après avoir vérifié que le fichier n'est pas modifiable par un compte non administrateur." }
     }
   } else {
     Write-Host "  Aucun nginx.exe trouvé sous : $($Path -join ', ')"
@@ -174,8 +205,11 @@ $procs = Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.ProcessNa
 if ($procs) {
   $procs | Select-Object Id, ProcessName, Path | Format-Table -AutoSize | Out-String | Write-Host
   foreach ($p in ($procs | Where-Object { $_.Path } | Select-Object -ExpandProperty Path -Unique)) {
-    $info = Get-NginxInfoFromExe $p
-    if ($info.Version) { Add-NginxVersionFinding $info.Version "processus actif ($p)" $info.IsPlus }
+    # Lecture statique uniquement -- même principe que la section 2 : un processus déjà en cours
+    # ne garantit pas que le FICHIER à son chemin n'a pas été remplacé depuis, donc pas d'exécution.
+    $ver = Get-NginxVersionStatic $p
+    if ($ver) { Add-NginxVersionFinding $ver "processus actif ($p)" $false }
+    else { Add-Finding UNKNOWN "processus actif ($p) : version illisible statiquement -- vérifier manuellement." }
   }
 } else {
   Write-Host "  Aucun processus nginx trouvé."
@@ -266,7 +300,7 @@ if ($Verdict -eq 'VULNÉRABLE') {
 } else {
   Write-Host "Confiance : PARTIELLE — mode lecture seule : seuls l'hôte et les conteneurs ACTIFS ont été inspectés. Une image Docker Desktop locale non démarrée peut contenir un nginx vulnérable sans apparaître ici. Relancer avec -ScanImages pour être certain." -ForegroundColor Yellow
 }
-Write-Host "[LIMITE] Ce script n'exploite pas la faille et ne prouve pas l'absence de compromission. La recherche sur disque est bornée aux chemins -Path. Les conteneurs Windows natifs (non-WSL2) ne sont pas sondés par la commande 'sh' utilisée ici."
+Write-Host "[LIMITE] Ce script n'exploite pas la faille et ne prouve pas l'absence de compromission. La recherche sur disque est bornée aux chemins -Path. Les binaires trouvés par recherche sur disque ou par un processus/service déjà en cours ne sont jamais exécutés (sécurité) : leur version est lue statiquement, et nginx Plus n'est alors pas détectable (seul le nginx.exe du PATH, exécuté, peut révéler 'Plus'). Les conteneurs Windows natifs (non-WSL2) ne sont pas sondés par la commande 'sh' utilisée ici."
 Write-Host "Références : https://nginx.org/en/security_advisories.html  |  https://security-tracker.debian.org/  |  https://ubuntu.com/security/notices/"
 
 switch ($Verdict) {
