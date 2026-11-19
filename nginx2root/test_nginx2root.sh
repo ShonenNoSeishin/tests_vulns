@@ -65,6 +65,8 @@ ver_fixed_branch() {
   case "$min" in ''|*[!0-9]*) echo unk; return ;; esac
   case "$pat" in ''|*[!0-9]*) pat=0 ;; esac
   if [ "$maj" -ne 1 ]; then echo unk; return; fi
+  if [ "$min" -lt 9 ]; then echo ok; return; fi
+  if [ "$min" -eq 9 ] && [ "$pat" -lt 5 ]; then echo ok; return; fi
   if [ "$min" -lt 30 ]; then echo vuln; return; fi
   if [ "$min" -eq 30 ]; then [ "$pat" -ge 7 ] && echo ok || echo vuln; return; fi
   if [ "$min" -eq 31 ]; then [ "$pat" -ge 9 ] && echo ok || echo vuln; return; fi
@@ -118,14 +120,24 @@ elif command -v pacman >/dev/null 2>&1; then
   pkgver=$(pacman -Q nginx 2>/dev/null | awk "{print \$2}")
 fi
 echo "pkgver=${pkgver:-}"
+# Le paquet dpkg trouvé ci-dessus correspond-il VRAIMENT au binaire $nginx_bin repéré plus haut ?
+# Sans cette vérification, un nginx compilé à la main ou installé depuis un autre dépôt (nginx.org,
+# PPA...) sur un hôte Ubuntu pourrait être couvert à tort par un paquet système sans rapport avec
+# lui -- jamais conclure [CORRIGÉ] sur la seule foi du nom de la distro ou d un paquet non lié.
+pkgowns=no
+if [ -n "$pkgver" ] && command -v dpkg >/dev/null 2>&1; then
+  ownpkg=$(dpkg -S "$nginx_bin" 2>/dev/null | sed -n "s/^\([^:]*\):.*/\1/p" | head -n1)
+  case "$ownpkg" in nginx|nginx-core|nginx-light|nginx-full|nginx-extras) pkgowns=yes ;; esac
+fi
+echo "pkgowns=$pkgowns"
 '
 
 analyse() { # $1 = libellé, $2 = sortie du PROBE
-  local label="$1" out="$2" present ver plus http2mod http2cfg pkgver osid oscodename status ubfixed
+  local label="$1" out="$2" present ver plus http2mod http2cfg pkgver pkgowns osid oscodename status ubfixed is_ubuntu_build
   present=$(get "$out" nginx)
   if [ "$present" != "present" ]; then printf '  [NON CONCERNÉ] %s : pas de nginx\n' "$label"; NC=$((NC+1)); return; fi
   ver=$(get "$out" ver); plus=$(get "$out" plus); http2mod=$(get "$out" http2mod)
-  http2cfg=$(get "$out" http2cfg); pkgver=$(get "$out" pkgver)
+  http2cfg=$(get "$out" http2cfg); pkgver=$(get "$out" pkgver); pkgowns=$(get "$out" pkgowns)
   osid=$(get "$out" osid); oscodename=$(get "$out" oscodename)
 
   if [ "$plus" = "yes" ]; then
@@ -138,21 +150,21 @@ analyse() { # $1 = libellé, $2 = sortie du PROBE
   fi
 
   # Ubuntu : rétroportage sans changer le numéro de version amont -- comparer le paquet dpkg à la
-  # table USN-9159-1, jamais `nginx -v`, sous peine de faux positif sur un système déjà corrigé.
-  if [ "$osid" = "ubuntu" ]; then
-    if [ "$oscodename" = "trusty" ]; then
-      OK=$((OK+1)); printf '  [NON CONCERNÉ] %s : Ubuntu 14.04 (trusty), non affecté par cet avis selon Canonical\n' "$label"
-      return
-    fi
+  # table USN-9159-1, jamais `nginx -v` seul. MAIS uniquement si ce paquet correspond VRAIMENT au
+  # binaire trouvé ($pkgowns=yes, voir PROBE) et ressemble à un vrai paquet d'archive Ubuntu (motif
+  # "ubuntu"/"+esm" dans son numéro) -- sinon on ne peut pas garantir que le binaire sondé est bien
+  # celui que dpkg décrit, et on retombe sur la comparaison de version amont standard ci-dessous.
+  # Jamais de [CORRIGÉ] ou de [NON CONCERNÉ] automatique sur la seule foi du nom de la distro.
+  is_ubuntu_build=no
+  if [ "$osid" = "ubuntu" ] && [ "$pkgowns" = "yes" ]; then
+    case "$pkgver" in *ubuntu*|*+esm*) is_ubuntu_build=yes ;; esac
+  fi
+
+  if [ "$is_ubuntu_build" = "yes" ] && [ "$oscodename" != "trusty" ]; then
     ubfixed=$(ubuntu_fixed "$oscodename")
     if [ -z "$ubfixed" ]; then
       UNK=$((UNK+1)); FINDINGS+=("$label")
       printf '  [À VÉRIFIER] %s : Ubuntu "%s" non reconnu par ce script -- comparer manuellement à https://ubuntu.com/security/notices/USN-9159-1\n' "$label" "${oscodename:-codename illisible}"
-      return
-    fi
-    if [ -z "$pkgver" ]; then
-      UNK=$((UNK+1)); FINDINGS+=("$label")
-      printf '  [À VÉRIFIER] %s : Ubuntu %s mais paquet nginx introuvable via dpkg-query (installation non standard ?)\n' "$label" "$oscodename"
       return
     fi
     if have dpkg; then
@@ -170,6 +182,9 @@ analyse() { # $1 = libellé, $2 = sortie du PROBE
     printf '  [À VÉRIFIER] %s : Ubuntu %s, mais la commande "dpkg" (comparaison de version) est absente sur CETTE machine -- impossible de comparer %s à %s de façon fiable\n' "$label" "$oscodename" "$pkgver" "$ubfixed"
     return
   fi
+  if [ "$osid" = "ubuntu" ] && [ "$is_ubuntu_build" != "yes" ]; then
+    printf '      [INFO] %s : hôte Ubuntu, mais le binaire nginx trouvé ne correspond pas (ou pas avec certitude) à un paquet d archive Ubuntu standard -- comparaison basée sur la version réelle du binaire, pas sur le nom de la distro\n' "$label"
+  fi
 
   if [ -z "$ver" ]; then
     UNK=$((UNK+1)); FINDINGS+=("$label")
@@ -184,7 +199,7 @@ analyse() { # $1 = libellé, $2 = sortie du PROBE
       printf '  [VULNÉRABLE] %s : nginx %s (< 1.30.7 / < 1.31.9) — CVE-2026-123007/123633 (RCE non authentifiée)\n' "$label" "$ver"
       printf '      + 8 autres CVE du lot du 18/11/2026, dont certaines sans rapport avec HTTP/2 : patcher quand même\n'
       printf '      module HTTP/2 compilé : %s ; activé dans la config lue (best-effort) : %s\n' "$http2mod" "$http2cfg"
-      [ -n "$pkgver" ] && printf '      paquet système détecté : %s (aucun rétroportage Debian connu à ce jour, voir README)\n' "$pkgver"
+      [ -n "$pkgver" ] && printf '      paquet système détecté : %s (aucun rétroportage distro confirmé pour ce binaire, voir README)\n' "$pkgver"
       ;;
     ok)
       OK=$((OK+1))
