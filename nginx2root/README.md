@@ -172,7 +172,7 @@ Désactiver HTTP/2 réduit l'exposition aux **deux** RCE (pas aux 8 autres CVE d
 | LXC | À vérifier | Dépend si le conteneur fait tourner nginx en version vulnérable |
 | Veeam | Non impacté |  |
 | Nakivo | Non impacté |  |
-| 3CX | Non impacté |  |
+| 3CX | **Impacté** | 3CX (Linux, Debian) utilise nginx comme serveur web / reverse-proxy de la console et des clients web : lancer le script sur le serveur 3CX ; correctif via les mises à jour 3CX/Debian dès leur publication, HTTP/2 off en attendant |
 | Elastix | Non impacté |  |
 | Andrisoft WANGuard | Non impacté |  |
 | Datalust Seq | Non impacté |  |

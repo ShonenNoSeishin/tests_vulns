@@ -26,7 +26,7 @@ impact:
   - {product: "LXC", status: "to_check", note: "Dépend si le conteneur fait tourner nginx en version vulnérable"}
   - {product: "Veeam", status: "not_impacted"}
   - {product: "Nakivo", status: "not_impacted"}
-  - {product: "3CX", status: "not_impacted"}
+  - {product: "3CX", status: "impacted", note: "3CX (Linux, Debian) utilise nginx comme serveur web / reverse-proxy de la console et des clients web : lancer le script sur le serveur 3CX ; correctif via les mises à jour 3CX/Debian dès leur publication, HTTP/2 off en attendant"}
   - {product: "Elastix", status: "not_impacted"}
   - {product: "Andrisoft WANGuard", status: "not_impacted"}
   - {product: "Datalust Seq", status: "not_impacted"}
