@@ -17,7 +17,14 @@ distro concernée, CISA KEV) :
 - **Toutes** les versions/variantes affectées, et les subtilités de packaging :
   - **Backporting** : la distro (Debian/Ubuntu/RHEL...) a-t-elle backporté le correctif dans une
     version de paquet qui semble "ancienne" en upstream ? Vérifier via le security tracker officiel
-    et `changelog`, pas seulement le numéro de version affiché par le binaire.
+    et `changelog`, pas seulement le numéro de version affiché par le binaire. **Noter
+    explicitement le résultat des deux cas, pas seulement "backport existe"** : si tu confirmes
+    qu'AUCUN correctif n'est encore disponible dans les dépôts d'une distro (cas réel : nginx2root,
+    Debian trixie, 19/11/2026 — toujours marqué "vulnerable" sur security-tracker.debian.org pour
+    `1.26.3-3+deb13u10`), ce fait doit être écrit noir sur blanc dans le README **et** dans
+    `vuln.yaml` → `fix:` (voir section 2) : c'est l'information qui évite qu'un technicien lance
+    `apt install --only-upgrade <paquet>`, lise "already the newest version", et conclue à tort
+    que c'est corrigé.
   - **Snap / Flatpak / AppImage** : le paquet confiné embarque-t-il sa propre copie de la
     dépendance vulnérable (souvent non alignée sur la version système) ?
   - **Docker/Podman** : images officielles vs images tierces, images locales non démarrées
@@ -64,6 +71,11 @@ du repo (relire un dossier existant, ex. `php2shell/`, avant d'écrire) :
     procédure dangereuse pour du L1.
   - **Aucune méthode d'exploitation ici.** Mention possible : "méthode active de vérification
     disponible dans `public-scan/`" si pertinent, sans payload.
+  - Si aucun rétroportage distro n'est confirmé (voir étape 1) : le dire en encadré bien visible
+    (pas noyé en fin de tableau), mettre le vrai correctif disponible (dépôt amont, backport
+    manuel, contournement) en premier dans la procédure, et terminer la section correction par un
+    rappel explicite de relancer le script pour confirmer — ne jamais laisser la commande standard
+    du gestionnaire de paquets comme seule option présentée.
 - Ajoute une ligne dans le tableau « Failles couvertes » de `README.md` racine.
 - Mets à jour `REMEDIATION.md` (arbre de décision) avec le nouveau cas.
 - **Crée ou mets à jour `<slug>/vuln.yaml` — OBLIGATOIRE, pas optionnel.** C'est ce fichier que lit
@@ -79,6 +91,19 @@ du repo (relire un dossier existant, ex. `php2shell/`, avant d'écrire) :
     fichier présent à côté du `vuln.yaml`, pas un chemin d'un autre dossier) ;
   - `results`, `fix`, `references` : uniquement des liens `https://` officiels, jamais de méthode
     d'exploitation (même règle que le README).
+  - **`fix:` — règle anti-faux-sentiment-de-sécurité (voir `docs/FORMAT.md` pour le détail
+    complet), à appliquer systématiquement, pas seulement quand le cas se présente de façon
+    évidente** : l'app IRM affiche ce champ directement, sans forcément montrer le README complet,
+    donc la nuance doit vivre dans le YAML lui-même.
+    1. Le **premier** élément de `fix:` doit être celui qui corrige réellement la faille
+       **aujourd'hui**, d'après ce que tu as vérifié à l'étape 1 — jamais une commande standard de
+       gestionnaire de paquets si aucun rétroportage distro n'est confirmé.
+    2. Si une commande de gestionnaire de paquets est quand même listée alors qu'aucun
+       rétroportage n'existe, son `command:` doit porter l'avertissement **dans la chaîne
+       elle-même** (pas seulement dans `for:`) — ex. `"NE CORRIGE RIEN tant qu'aucun correctif
+       distro n'est sorti pour cette CVE précise -- voir le dépôt amont ci-dessus"`.
+    3. **Toujours** terminer `fix:` par un élément du type
+       `{for: "Après toute action", command: "Relancer le script de détection et vérifier le numéro de version affiché -- ne jamais se fier au seul message du gestionnaire de paquets"}`.
 
 ## 3. Volet privé — `/home/thib/ir-context/deep-dive/<slug>/`
 

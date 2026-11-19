@@ -36,3 +36,31 @@ references:
 ```
 
 Règles de contenu (dépôt public) : voir `CLAUDE.md` — pas de nom de société, d'hôte ou d'IP internes, pas de méthode d'exploitation, pas de secret.
+
+## Règle sur `fix:` — ne jamais présenter un correctif qui peut ne rien faire comme suffisant
+
+**Incident réel (nginx2root, 19/11/2026)** : un technicien a lu la fiche, lancé la commande de
+correction listée en premier (`apt install --only-upgrade nginx`), obtenu
+`nginx is already the newest version`, et en a conclu — à raison, compte tenu de ce qui était
+écrit — que la faille était corrigée. En réalité Debian n'avait tout simplement **pas encore
+publié de correctif** pour cette CVE précise : « déjà la plus récente » ne veut dire que « c'est
+la version la plus récente **disponible dans les dépôts configurés** », jamais « c'est corrigé ».
+L'app IRM affiche le champ `fix:` directement, sans forcément montrer tout le README — la
+nuance doit donc vivre **dans le YAML lui-même**, pas seulement en prose dans le README.
+
+Conséquences concrètes pour chaque `vuln.yaml` :
+
+1. **Vérifier le statut du rétroportage avant d'écrire `fix:`** (tracker de sécurité officiel de
+   chaque distro pertinente, pas une supposition). Ce statut doit être revérifié à chaque mise à
+   jour de la fiche — il peut changer entre deux relectures.
+2. **Le premier élément de `fix:` doit toujours être celui qui corrige réellement la faille
+   aujourd'hui.** Si aucun rétroportage distro n'existe encore, ce n'est PAS la commande standard
+   du gestionnaire de paquets (dépôt amont officiel, backport manuel, contournement — selon ce qui
+   marche vraiment).
+3. **Si la commande standard du gestionnaire de paquets est quand même listée alors qu'aucun
+   rétroportage n'est confirmé**, son `command:` doit porter l'avertissement **dans la chaîne
+   elle-même** (pas seulement dans `for:`), par exemple :
+   `"NE CORRIGE RIEN tant qu'aucun correctif distro n'est sorti pour cette CVE précise -- 'already the newest version' ne le prouve pas, voir le dépôt amont ci-dessus"`.
+4. **Toujours terminer `fix:` par un rappel de vérification** pointant vers le script de détection
+   du dossier, pas vers le seul message du gestionnaire de paquets, par exemple :
+   `{for: "Après toute action", command: "Relancer le script de détection et vérifier le numéro de version affiché -- ne jamais se fier au seul message du gestionnaire de paquets"}`.

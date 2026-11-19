@@ -8,8 +8,8 @@ exploited: false
 kev: false
 summary: >-
   Deux failles critiques (CVSS 9.2) dans le contrôle de flux HTTP/2 de nginx permettent une exécution de code à distance sans
-  authentification. CVE-2026-123007 est présente depuis 2015 ; un PoC public existe. Correctif du 18/11/2026, aucun rétroportage
-  distro connu à ce jour.
+  authentification. CVE-2026-123007 est présente depuis 2015 ; un PoC public existe. Correctif du 18/11/2026, confirmé encore ABSENT
+  des dépôts Debian/Ubuntu au 19/11/2026 : 'apt install --only-upgrade nginx' ne corrige rien, utiliser le dépôt nginx.org.
 affects:
   - "nginx open source < 1.30.7 (stable) ou < 1.31.9 (mainline)"
   - "nginx Plus < 37.0.8.1 / 37.3.0.1 (CVE-2026-123007) ou < 37.0.7.1 / 37.2.0.1 (CVE-2026-123633)"
@@ -26,11 +26,12 @@ results:
   - {status: "À VÉRIFIER", meaning: "nginx Plus détecté, ou version illisible.", action: "Comparer manuellement sur le portail support F5, ou relancer en root (README)."}
   - {status: "CORRIGÉ", meaning: "Version >= 1.30.7 ou >= 1.31.9.", action: "Rien."}
 fix:
-  - {for: "Paquet système (apt, si déjà disponible)", command: "apt update && apt install --only-upgrade nginx"}
-  - {for: "Dépôt officiel nginx.org (recommandé si pas encore dans apt/dnf)", command: "Suivre nginx.org/en/linux_packages.html puis apt/dnf update"}
+  - {for: "Dépôt officiel nginx.org (fonctionne dès aujourd'hui -- voir avertissement ci-dessous)", command: "Suivre nginx.org/en/linux_packages.html (ajoute un dépôt nginx.org prioritaire sur celui de la distro) puis apt update && apt install nginx"}
+  - {for: "⚠️ Paquet système distro seul (apt/dnf), SANS le dépôt nginx.org", command: "NE CORRIGE RIEN au 19/11/2026 pour Debian/Ubuntu : 'apt install --only-upgrade nginx' répondra 'already the newest version' même si la CVE n'est PAS corrigée -- Debian/Ubuntu n'ont encore publié aucun correctif pour CES CVE précises (vérifié sur security-tracker.debian.org). Utiliser le dépôt nginx.org ci-dessus."}
   - {for: "Alpine", command: "apk update && apk upgrade nginx"}
   - {for: "Image Docker officielle", command: "docker pull nginx:<tag-reconstruit> && docker compose up -d --force-recreate"}
   - {for: "Contournement temporaire (HTTP/2 seulement, ne couvre pas les 8 autres CVE du lot)", command: "Retirer le paramètre http2 des directives listen, ou http2 off; puis nginx -s reload"}
+  - {for: "Après toute action", command: "Relancer test_nginx2root.sh / Test-Nginx2Root.ps1 et vérifier que la version AFFICHÉE est bien >= 1.30.7 ou >= 1.31.9 -- ne jamais se fier au seul message du gestionnaire de paquets"}
 fixed_versions: "nginx 1.30.7 (stable), 1.31.9 (mainline) ; nginx Plus 37.0.8.1/37.3.0.1 et 37.0.7.1/37.2.0.1 selon le CVE."
 docs: [README.md]
 references:
