@@ -1,47 +1,51 @@
 id: fortinet-novembre-2026
-title: "Fortinet — lot de correctifs de novembre 2026 (FortiManager, FortiOS)"
-cves: [CVE-2026-126261, CVE-2026-126253]
+title: "Fortinet — lot de correctifs de novembre 2026 (FortiManager, FortiAnalyzer, FortiOS)"
+cves: [CVE-2026-126261, CVE-2026-126170, CVE-2026-126253]
 severity: critical
 published: 2026-11-10
-updated: 2026-11-12
+updated: 2026-11-19
 exploited: false
 kev: false
 summary: >-
-  Fortinet a publié le 10 novembre une centaine de correctifs. Deux avis vérifiés : FortiManager/FortiAnalyzer (exécution de code sans
-  authentification via le service FGFM, CVSS 9.0) et FortiOS (contournement d'authentification OSPF, CVSS 9.3). Pas d'exploitation connue
-  à ce jour, mais les produits Fortinet sont des cibles habituelles : mettre à jour rapidement.
+  Fortinet a publié le 10 novembre une centaine de correctifs. Trois avis vérifiés : FortiManager/FortiAnalyzer FGFM (CVSS 9.0), injection
+  JSON API JRPC FortiManager/FortiAnalyzer/BigData (CVSS 9.8, ajoutée le 19/11) et FortiOS OSPF (CVSS 9.3). Pas d'exploitation connue à ce
+  jour, mais les produits Fortinet sont des cibles habituelles : mettre à jour rapidement.
 affects:
-  - FortiManager / FortiAnalyzer 8.0.0, 7.6.0–7.6.7, 7.4.0–7.4.5, 7.2.0–7.2.8
-  - FortiOS 8.0.0–8.0.1, 7.6.0–7.6.7, 7.4.0–7.4.12, 7.2.0–7.2.13, 7.0.1–7.0.19
-tags: [fortinet, pare-feu, fortios, fortimanager]
+  - FortiManager / FortiAnalyzer (FG-IR-26-275) 8.0.0, 7.6.0–7.6.7, 7.4.0–7.4.5, 7.2.0–7.2.8
+  - FortiManager / FortiAnalyzer (FG-IR-26-219) 8.0.0–8.0.2, 7.6.0–7.6.7 ; FortiAnalyzer-BigData 7.6.0–7.6.2
+  - FortiOS (FG-IR-26-267) 8.0.0–8.0.1, 7.6.0–7.6.7, 7.4.0–7.4.12, 7.2.0–7.2.13, 7.0.1–7.0.19
+tags: [fortinet, pare-feu, fortios, fortimanager, fortianalyzer]
 concerned:
-  - "Vous administrez un FortiManager ou FortiAnalyzer dans une des versions ci-dessus, surtout si le port FGFM (TCP 541) est joignable depuis un réseau non fiable."
+  - "Vous administrez un FortiManager ou FortiAnalyzer dans une des versions ci-dessus, surtout si le port FGFM (TCP 541) est joignable depuis un réseau non fiable, ou si l'API JSON est activée sur un profil admin."
   - "Vous avez un FortiGate (FortiOS) dans une des versions ci-dessus avec OSPF activé (attaque depuis un réseau adjacent)."
 not_concerned:
-  - "Versions ≥ 8.0.2 / 7.6.8 / 7.4.13 / 7.2.14 (FortiOS) ou ≥ 8.0.1 / 7.6.8 / 7.4.6 / 7.2.9 (FortiManager)."
+  - "Versions ≥ 8.0.2 / 7.6.8 / 7.4.13 / 7.2.14 (FortiOS) ou ≥ 8.0.1 / 7.6.8 / 7.4.6 / 7.2.9 (FortiManager, avis FGFM) et ≥ 7.6.8 (avis API JRPC, branche 7.4/7.2 non concernée par cet avis)."
   - "FortiMail, FortiSASE et les autres produits du lot : voir le portail PSIRT (non couverts par l'outil de ce dossier)."
 tests:
   - os: linux
     label: "Linux / macOS — comparer une version"
     file: check_fortinet_version.sh
-    run: "chmod +x check_fortinet_version.sh && ./check_fortinet_version.sh fortios 7.4.12"
-    note: "Aucune connexion au pare-feu : vous donnez la version lue dans l'interface ou par `get system status`."
+    run: "chmod +x check_fortinet_version.sh && ./check_fortinet_version.sh fortimanager 7.6.5"
+    note: "Aucune connexion au pare-feu : vous donnez la version lue dans l'interface ou par `get system status`. Vérifie tous les avis applicables au produit donné (fortimanager/fortianalyzer-bigdata/fortios)."
   - os: windows
     label: "Windows — comparer une version"
     file: Check-FortinetVersion.ps1
-    run: ".\\Check-FortinetVersion.ps1 -Product fortios -Version 7.4.12"
+    run: ".\\Check-FortinetVersion.ps1 -Product fortimanager -Version 7.6.5"
     note: "Même logique en PowerShell."
 results:
-  - {status: "VULNÉRABLE", meaning: "Version antérieure à la première version corrigée de sa branche.", action: "Planifier la mise à jour (sauvegarde de la configuration d'abord)."}
-  - {status: "À VÉRIFIER", meaning: "Branche non listée dans l'avis, ou version illisible.", action: "Consulter le portail PSIRT Fortinet."}
-  - {status: "CORRIGÉ", meaning: "Version corrigée pour CET avis.", action: "Viser la dernière version de la branche : le lot compte d'autres corrections."}
+  - {status: "VULNÉRABLE", meaning: "Version antérieure à la version corrigée d'au moins un avis applicable.", action: "Planifier la mise à jour (sauvegarde de la configuration d'abord) ou appliquer le contournement en attendant."}
+  - {status: "À VÉRIFIER", meaning: "Branche non listée dans un avis, ou version illisible.", action: "Consulter le portail PSIRT Fortinet."}
+  - {status: "CORRIGÉ", meaning: "Version corrigée pour tous les avis applicables à cette branche.", action: "Viser la dernière version de la branche : le lot compte d'autres corrections."}
 fix:
-  - {for: "FortiManager / FortiAnalyzer", command: "Mise à niveau vers 8.0.1 / 7.6.8 / 7.4.6 / 7.2.9 (ou plus récent) — Système > Paramètres > Firmware ; sauvegarder avant."}
+  - {for: "FortiManager / FortiAnalyzer", command: "Mise à niveau vers 8.0.1+/7.6.8+/7.4.6+/7.2.9+ (FGFM) et 8.0.3+/7.6.8+ (API JRPC) — Système > Paramètres > Firmware ; sauvegarder avant."}
+  - {for: "FortiAnalyzer-BigData", command: "Mise à niveau vers 7.6.3 ou plus récent (API JRPC)."}
   - {for: "FortiOS (FortiGate)", command: "Mise à niveau vers 8.0.2 / 7.6.8 / 7.4.13 / 7.2.14 (ou plus récent) — Système > Firmware ; un nœud de cluster à la fois. La branche 7.0 n'a pas de correctif : migrer."}
-  - {for: "En attendant (FortiManager)", command: "Restreindre le port FGFM (TCP 541) et l'accès d'administration aux seuls réseaux de gestion ; ne jamais les exposer à Internet."}
-fixed_versions: "FortiManager : 8.0.1, 7.6.8, 7.4.6, 7.2.9. FortiOS : 8.0.2, 7.6.8, 7.4.13, 7.2.14."
+  - {for: "En attendant (API JSON, FG-IR-26-219)", command: "config system admin profile / edit <profil> / set rpc-permit none  # si l'API JSON était activée"}
+  - {for: "En attendant (FGFM, FG-IR-26-275)", command: "Restreindre le port FGFM (TCP 541) et l'accès d'administration aux seuls réseaux de gestion ; ne jamais les exposer à Internet."}
+fixed_versions: "FortiManager/FortiAnalyzer : 8.0.1/7.6.8/7.4.6/7.2.9 (FGFM), 8.0.3/7.6.8 (API JRPC, 8.0.3 annoncé non publié au 19/11). BigData : 7.6.3. FortiOS : 8.0.2, 7.6.8, 7.4.13, 7.2.14."
 docs: [README.md]
 references:
   - {title: "Avis FG-IR-26-275 — FortiManager FGFM (Fortinet PSIRT)", url: "https://www.fortiguard.com/psirt/FG-IR-26-275"}
+  - {title: "Avis FG-IR-26-219 — Injection JSON API JRPC (Fortinet PSIRT)", url: "https://www.fortiguard.com/psirt/FG-IR-26-219"}
   - {title: "Avis FG-IR-26-267 — FortiOS OSPF (Fortinet PSIRT)", url: "https://www.fortiguard.com/psirt/FG-IR-26-267"}
   - {title: "Portail PSIRT Fortinet", url: "https://www.fortiguard.com/psirt"}
