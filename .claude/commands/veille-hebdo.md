@@ -6,6 +6,31 @@ Tu fais la veille sécurité hebdomadaire d'un hébergeur cloud. Lis d'abord
 `/home/thib/ir-context/company-profile.md` (contexte privé : parc machines, priorités) — ne cite
 jamais son contenu brut dans le document final, utilise-le seulement pour prioriser et filtrer.
 
+## 0bis. Si c'est une mise à jour ponctuelle ("qu'est-ce qui a changé depuis...", "refais une
+analyse", avec ou sans invoquer `/veille-hebdo` explicitement) — ne JAMAIS se limiter à
+ré-interroger les éléments déjà nommés
+
+**Erreur réelle commise le 20/11/2026** : une demande "refais une analyse de ce qui est nouveau
+depuis ta dernière analyse" a été traitée comme une simple ré-vérification du statut de correctif
+des 3 failles déjà citées dans la dernière veille (nginx, FortiManager, Proxmox) + MikroTik + KEV
+pour ces CVE précises. Ça a raté deux choses qu'une collecte complète aurait trouvées du premier
+coup : (1) une exploitation active nouvellement confirmée sur une faille **déjà publiée**
+(PHP2Shell, Unit42) et (2) un **tout nouveau lot de 18 CVE PHP** publié la veille — les deux hors
+du périmètre de la ré-vérification ciblée. Il a fallu une deuxième relance utilisateur
+("et pas de nouvelles failles ?") pour les trouver.
+
+**Règle** : toute demande de ce type (même formulée de façon informelle, sans taper
+`/veille-hebdo`) doit déclencher une collecte **aussi complète que la section 1 ci-dessous**, en
+plus de la ré-vérification des éléments déjà suivis :
+- refaire la recherche large "major/critical CVE this week" (voir section 1) ;
+- repasser sur **chaque dossier déjà publié** dans `tests_vulns/` dont la faille reste
+  d'actualité, pas seulement les tout derniers, pour vérifier si son **statut d'exploitation
+  active** a changé depuis (pas seulement son statut de correctif — une faille peut rester "même
+  version affectée" mais passer de "pas d'exploitation connue" à "exploitée activement", ce qui
+  change la priorité) ;
+- revérifier les sources NVD/GHSA/vendeur pour tous les composants du parc listés en section 1,
+  pas seulement ceux mentionnés dans la dernière veille écrite.
+
 ## 1. Collecte
 
 Cherche les failles/CVE **divulguées ou mises à jour significativement dans les 7 derniers jours**
@@ -23,6 +48,16 @@ Cherche les failles/CVE **divulguées ou mises à jour significativement dans le
 - Recoupe avec des flux généralistes (ex. The Hacker News, BleepingComputer, Rapid7, Tenable
   blog) seulement pour repérer ce qui serait massivement exploité et absent des sources
   officielles ci-dessus — jamais comme source principale de la version/patch.
+- **Fiabilité des sources — fetch direct de la page officielle avant d'écrire un fait
+  daté/versionné dans le document, jamais une recherche web indirecte seule.** Une recherche web
+  (résumé de snippets) peut rater ou mal résumer une page récemment mise à jour. Constaté le
+  20/11/2026 : une recherche web sur `security-tracker.debian.org` a répondu "pas de correctif
+  trouvé / non confirmé", alors qu'un fetch direct de la même page montrait immédiatement un
+  correctif publié la veille. La recherche web reste valide pour la phase de **découverte**
+  (repérer *qu'une* faille existe) ; pour toute affirmation qui sera écrite dans le document
+  (numéro de version corrigée, statut KEV, date, statut d'exploitation active), aller
+  chercher/fetcher directement la page officielle (avis vendeur, security tracker, page KEV de
+  cisa.gov...) avant de la considérer comme établie.
 - **Grosses failles généralistes de la semaine, même hors liste de composants explicite** :
   fais systématiquement une recherche large type "major/critical CVE this week" en plus des
   recherches ciblées par produit ci-dessus. Logiciels d'infrastructure très largement déployés

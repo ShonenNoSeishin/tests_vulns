@@ -14,6 +14,14 @@ Rassemble, de sources officielles en priorité (avis vendeur, NVD, GHSA, securit
 distro concernée, CISA KEV) :
 
 - Description technique précise du mécanisme (pas juste "RCE", le *comment*).
+- **Fiabilité des sources — fetch direct de la page officielle, jamais une recherche web indirecte
+  seule, pour confirmer un fait précis.** Une recherche web (résumé de snippets) peut rater ou mal
+  résumer une page récemment mise à jour. Constaté le 20/11/2026 : une recherche web sur
+  `security-tracker.debian.org` a répondu "pas de correctif trouvé", alors qu'un fetch direct de la
+  même page montrait immédiatement un correctif publié la veille. La recherche web reste valide
+  pour la découverte (trouver que la faille existe, les grandes lignes) ; pour toute version
+  corrigée, statut KEV, date, ou statut d'exploitation active qui finira dans le README/`vuln.yaml`,
+  toujours refetcher la source primaire (avis vendeur, security tracker, cisa.gov) avant d'écrire.
 - **Toutes** les versions/variantes affectées, et les subtilités de packaging :
   - **Backporting** : la distro (Debian/Ubuntu/RHEL...) a-t-elle backporté le correctif dans une
     version de paquet qui semble "ancienne" en upstream ? Vérifier via le security tracker officiel
