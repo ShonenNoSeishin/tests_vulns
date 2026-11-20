@@ -49,12 +49,26 @@ ubuntu_fixed() {
   esac
 }
 
+# Même piège côté Debian, rattrapé le 20/11/2026 : DLA-4918-1 (bookworm) et DSA-6642-1 (trixie),
+# publiées le 19/11/2026, corrigent CVE-2026-123007/123633 SANS changer le numéro de version amont
+# (trixie "corrigé" reste nginx/1.26.3 côté `nginx -v`, seul le suffixe de paquet dpkg change) --
+# comparer le NUMÉRO DE PAQUET à cette table, jamais `nginx -v` seul, exactement comme pour Ubuntu.
+# $1 = codename (ex. trixie) -> version de paquet corrigée, vide si codename non reconnu.
+debian_fixed() {
+  case "$1" in
+    trixie)   echo "1.26.3-3+deb13u11" ;;  # Debian 13 -- DSA-6642-1
+    bookworm) echo "1.22.1-9+deb12u11" ;;  # Debian 12 -- DLA-4918-1 (LTS)
+    *) echo "" ;;
+  esac
+}
+
 # Branche 1.30 (stable) corrigée à partir de .7 ; branche 1.31 (mainline) corrigée à partir de .9.
 # Toute branche < 1.30 (1.9.5 -> 1.29.x) est dans la plage affectée des deux CVE et n'a plus de
 # correctif amont dédié (branches non maintenues) : traitée comme vulnérable. Toute branche > 1.31
 # est postérieure à cet avis et supposée saine (à confirmer si un nouvel avis sort depuis).
-# UTILISÉE UNIQUEMENT quand aucune table de rétroportage distro ne s'applique (voir ubuntu_fixed
-# ci-dessus) -- reste correcte pour Debian, qui n'a aucun rétroportage à ce jour (voir README).
+# UTILISÉE UNIQUEMENT quand aucune table de rétroportage distro ne s'applique (ubuntu_fixed /
+# debian_fixed ci-dessus) -- reste correcte pour toute autre distro (Alpine, RHEL...) ou un nginx
+# compilé/installé hors paquet système.
 # $1 = version "X.Y.Z" -> "vuln" / "ok" / "unk"
 ver_fixed_branch() {
   local v="$1" maj min pat
@@ -149,15 +163,20 @@ analyse() { # $1 = libellé, $2 = sortie du PROBE
     return
   fi
 
-  # Ubuntu : rétroportage sans changer le numéro de version amont -- comparer le paquet dpkg à la
-  # table USN-9159-1, jamais `nginx -v` seul. MAIS uniquement si ce paquet correspond VRAIMENT au
-  # binaire trouvé ($pkgowns=yes, voir PROBE) et ressemble à un vrai paquet d'archive Ubuntu (motif
-  # "ubuntu"/"+esm" dans son numéro) -- sinon on ne peut pas garantir que le binaire sondé est bien
-  # celui que dpkg décrit, et on retombe sur la comparaison de version amont standard ci-dessous.
-  # Jamais de [CORRIGÉ] ou de [NON CONCERNÉ] automatique sur la seule foi du nom de la distro.
+  # Ubuntu/Debian : rétroportage sans changer le numéro de version amont -- comparer le paquet dpkg
+  # à la table USN-9159-1 (Ubuntu) ou DLA-4918-1/DSA-6642-1 (Debian), jamais `nginx -v` seul. MAIS
+  # uniquement si ce paquet correspond VRAIMENT au binaire trouvé ($pkgowns=yes, voir PROBE) et
+  # ressemble à un vrai paquet d'archive de la distro (motif "ubuntu"/"+esm" ou "+deb" dans son
+  # numéro) -- sinon on ne peut pas garantir que le binaire sondé est bien celui que dpkg décrit, et
+  # on retombe sur la comparaison de version amont standard ci-dessous. Jamais de [CORRIGÉ] ou de
+  # [NON CONCERNÉ] automatique sur la seule foi du nom de la distro.
   is_ubuntu_build=no
   if [ "$osid" = "ubuntu" ] && [ "$pkgowns" = "yes" ]; then
     case "$pkgver" in *ubuntu*|*+esm*) is_ubuntu_build=yes ;; esac
+  fi
+  is_debian_build=no
+  if [ "$osid" = "debian" ] && [ "$pkgowns" = "yes" ]; then
+    case "$pkgver" in *+deb*) is_debian_build=yes ;; esac
   fi
 
   if [ "$is_ubuntu_build" = "yes" ] && [ "$oscodename" != "trusty" ]; then
@@ -184,6 +203,31 @@ analyse() { # $1 = libellé, $2 = sortie du PROBE
   fi
   if [ "$osid" = "ubuntu" ] && [ "$is_ubuntu_build" != "yes" ]; then
     printf '      [INFO] %s : hôte Ubuntu, mais le binaire nginx trouvé ne correspond pas (ou pas avec certitude) à un paquet d archive Ubuntu standard -- comparaison basée sur la version réelle du binaire, pas sur le nom de la distro\n' "$label"
+  fi
+
+  if [ "$is_debian_build" = "yes" ]; then
+    dbfixed=$(debian_fixed "$oscodename")
+    if [ -z "$dbfixed" ]; then
+      UNK=$((UNK+1)); FINDINGS+=("$label")
+      printf '  [À VÉRIFIER] %s : Debian "%s" non reconnu par ce script (ni bookworm ni trixie) -- comparer manuellement à https://security-tracker.debian.org/tracker/CVE-2026-123007\n' "$label" "${oscodename:-codename illisible}"
+      return
+    fi
+    if have dpkg; then
+      if dpkg --compare-versions "$pkgver" lt "$dbfixed"; then
+        VULN=$((VULN+1)); FINDINGS+=("$label")
+        printf '  [VULNÉRABLE] %s : Debian %s, paquet nginx %s (< %s selon DLA-4918-1/DSA-6642-1)\n' "$label" "$oscodename" "$pkgver" "$dbfixed"
+      else
+        OK=$((OK+1))
+        printf '  [CORRIGÉ] %s : Debian %s, paquet nginx %s (>= %s selon DLA-4918-1/DSA-6642-1)\n' "$label" "$oscodename" "$pkgver" "$dbfixed"
+      fi
+      return
+    fi
+    UNK=$((UNK+1)); FINDINGS+=("$label")
+    printf '  [À VÉRIFIER] %s : Debian %s, mais la commande "dpkg" (comparaison de version) est absente sur CETTE machine -- impossible de comparer %s à %s de façon fiable\n' "$label" "$oscodename" "$pkgver" "$dbfixed"
+    return
+  fi
+  if [ "$osid" = "debian" ] && [ "$is_debian_build" != "yes" ]; then
+    printf '      [INFO] %s : hôte Debian, mais le binaire nginx trouvé ne correspond pas (ou pas avec certitude) à un paquet d archive Debian ayant déjà reçu un correctif de sécurité -- comparaison basée sur la version réelle du binaire, pas sur le nom de la distro\n' "$label"
   fi
 
   if [ -z "$ver" ]; then

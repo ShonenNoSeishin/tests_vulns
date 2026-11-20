@@ -3,15 +3,16 @@ title: "NGINX2Root — RCE non authentifiée via HTTP/2 dans nginx"
 cves: [CVE-2026-123007, CVE-2026-123633]
 severity: critical
 published: 2026-11-18
-updated: 2026-11-19
+updated: 2026-11-20
 exploited: false
 kev: false
 summary: >-
   Deux failles critiques (CVSS 9.2) dans le contrôle de flux HTTP/2 de nginx permettent une exécution de code à distance sans
-  authentification. CVE-2026-123007 est présente depuis 2015 ; un PoC public existe. Correctif du 18/11/2026 : Ubuntu l'a rétroporté le
-  19/11/2026 (USN-9159-1, sans changer le numéro de version amont -- le script compare le paquet dpkg) ; Debian n'a toujours aucun
-  correctif -- après un simple 'apt install --only-upgrade nginx', revérifier avec le script, et si toujours vulnérable basculer sur le
-  dépôt officiel nginx.org.
+  authentification. CVE-2026-123007 est présente depuis 2015 ; un PoC public existe. Correctif du 18/11/2026 chez l'éditeur ; Ubuntu
+  (USN-9159-1) et Debian (DLA-4918-1 bookworm, DSA-6642-1 trixie) ont tous les deux rétroporté le correctif le 19/11/2026 SANS changer le
+  numéro de version amont -- le script compare le paquet dpkg pour les deux distributions, jamais 'nginx -v' seul. Un simple
+  'apt update && apt install --only-upgrade nginx' suffit désormais pour Debian ET Ubuntu ; revérifier avec le script, et si toujours
+  vulnérable (dépôt en retard, distribution non couverte) basculer sur le dépôt officiel nginx.org.
 affects:
   - "nginx open source < 1.30.7 (stable) ou < 1.31.9 (mainline)"
   - "nginx Plus < 37.0.8.1 / 37.3.0.1 (CVE-2026-123007) ou < 37.0.7.1 / 37.2.0.1 (CVE-2026-123633)"
@@ -65,16 +66,19 @@ results:
   - {status: "CORRIGÉ", meaning: "Version >= 1.30.7 ou >= 1.31.9.", action: "Rien."}
 fix:
   - {for: "Étape 1 -- Debian/Ubuntu, tenter la mise à jour standard", command: "apt update && apt install --only-upgrade nginx"}
-  - {for: "Étape 2 -- OBLIGATOIRE, vérifier que l'étape 1 a réellement corrigé", command: "Relancer test_nginx2root.sh / Test-Nginx2Root.ps1. Sur Ubuntu, l'étape 1 suffit (USN-9159-1 du 19/11/2026) : le script compare le paquet dpkg, pas nginx -v, donc [CORRIGÉ] s'affichera correctement même si nginx -v semble ancien. Sur Debian, si le résultat affiche encore [VULNÉRABLE], l'étape 1 n'a RIEN corrigé (aucun correctif Debian à ce jour) -- passer à l'étape 3. 'already the newest version' ne prouve PAS que c'est corrigé."}
-  - {for: "Étape 3 -- Debian seulement, SI toujours [VULNÉRABLE] après l'étape 2 : basculer sur le dépôt officiel nginx.org", command: 'sudo apt install -y curl gnupg2 ca-certificates lsb-release debian-archive-keyring && curl https://nginx.org/keys/nginx_signing.key | gpg --dearmor | sudo tee /usr/share/keyrings/nginx-archive-keyring.gpg >/dev/null && echo "deb [signed-by=/usr/share/keyrings/nginx-archive-keyring.gpg] https://nginx.org/packages/debian $(lsb_release -cs) nginx" | sudo tee /etc/apt/sources.list.d/nginx.list && printf "Package: *\nPin: origin nginx.org\nPin: release o=nginx\nPin-Priority: 900\n" | sudo tee /etc/apt/preferences.d/99nginx && sudo apt update && sudo apt install nginx && sudo systemctl restart nginx'}
+  - {for: "Étape 2 -- OBLIGATOIRE, vérifier que l'étape 1 a réellement corrigé", command: "Relancer test_nginx2root.sh / Test-Nginx2Root.ps1. Depuis le 19/11/2026, Debian (DLA-4918-1/DSA-6642-1) ET Ubuntu (USN-9159-1) ont un correctif rétroporté : le script compare le paquet dpkg, pas nginx -v, donc [CORRIGÉ] s'affichera correctement même si nginx -v semble ancien. Si le résultat affiche encore [VULNÉRABLE] malgré ça (dépôt de sécurité en retard, miroir non synchronisé, distribution non couverte par la table du script), passer à l'étape 3. 'already the newest version' ne prouve PAS que c'est corrigé."}
+  - {for: "Étape 3 -- SI toujours [VULNÉRABLE] après l'étape 2 : basculer sur le dépôt officiel nginx.org", command: 'sudo apt install -y curl gnupg2 ca-certificates lsb-release debian-archive-keyring && curl https://nginx.org/keys/nginx_signing.key | gpg --dearmor | sudo tee /usr/share/keyrings/nginx-archive-keyring.gpg >/dev/null && echo "deb [signed-by=/usr/share/keyrings/nginx-archive-keyring.gpg] https://nginx.org/packages/debian $(lsb_release -cs) nginx" | sudo tee /etc/apt/sources.list.d/nginx.list && printf "Package: *\nPin: origin nginx.org\nPin: release o=nginx\nPin-Priority: 900\n" | sudo tee /etc/apt/preferences.d/99nginx && sudo apt update && sudo apt install nginx && sudo systemctl restart nginx'}
   - {for: "Alpine", command: "apk update && apk upgrade nginx"}
   - {for: "Image Docker officielle", command: "docker pull nginx:<tag-reconstruit> && docker compose up -d --force-recreate"}
   - {for: "Contournement temporaire en attendant (HTTP/2 seulement, ne couvre pas les 8 autres CVE du lot)", command: "Retirer le paramètre http2 des directives listen, ou http2 off; puis nginx -s reload"}
-  - {for: "Étape 4 -- toujours, après l'étape 3 ou tout autre correctif", command: "Relancer test_nginx2root.sh / Test-Nginx2Root.ps1 une dernière fois et confirmer [CORRIGÉ] (version >= 1.30.7/1.31.9) avant de considérer la faille traitée."}
-fixed_versions: "nginx 1.30.7 (stable), 1.31.9 (mainline) ; nginx Plus 37.0.8.1/37.3.0.1 et 37.0.7.1/37.2.0.1 selon le CVE."
+  - {for: "Étape 4 -- toujours, après l'étape 3 ou tout autre correctif", command: "Relancer test_nginx2root.sh / Test-Nginx2Root.ps1 une dernière fois et confirmer [CORRIGÉ] (version >= 1.30.7/1.31.9, ou paquet >= au seuil Debian/Ubuntu du README) avant de considérer la faille traitée."}
+fixed_versions: "nginx 1.30.7 (stable), 1.31.9 (mainline) ; nginx Plus 37.0.8.1/37.3.0.1 et 37.0.7.1/37.2.0.1 selon le CVE ; paquet Debian 13 (trixie) 1.26.3-3+deb13u11 (DSA-6642-1) ; paquet Debian 12 (bookworm) 1.22.1-9+deb12u11 (DLA-4918-1) ; paquet Ubuntu selon la table README (USN-9159-1)."
 docs: [README.md]
 references:
   - {title: "Avis officiel nginx", url: "https://nginx.org/en/security_advisories.html"}
   - {title: "Wiz — analyse technique", url: "https://www.wiz.io/blog/nginx-http2-rce-vulnerabilities"}
   - {title: "The Hacker News", url: "https://thehackernews.com/2026/11/10-year-old-nginx-http2-flaw-lets.html"}
   - {title: "Qualys — NGINX2Root", url: "https://blog.qualys.com/product-tech/patch-management/2026/11/18/nginx2root-five-nginx-flaws-led-by-cve-2026-123007-how-to-find-mitigate-and-patch-now"}
+  - {title: "DSA-6642-1 — Debian 13 (trixie)", url: "https://www.debian.org/security/2026/dsa-6642"}
+  - {title: "DLA-4918-1 — Debian 12 (bookworm, LTS)", url: "https://www.debian.org/lts/security/2026/dla-4918"}
+  - {title: "USN-9159-1 — Ubuntu", url: "https://ubuntu.com/security/notices/USN-9159-1"}
