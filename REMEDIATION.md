@@ -124,6 +124,8 @@ script avec `--scan-images`/`-ScanImages` (sinon une image jamais démarrée res
 
 | Faille | Composant trouvé vulnérable | Doc à lire en détail | Commande type (voir §4 pour le mode exact) |
 |---|---|---|---|
+| PHP — lot 19/11/2026 (18 CVE) | PHP via paquet système, Debian | [`php-novembre-2026/README.md`](php-novembre-2026/README.md) — tableau Debian | `apt install --only-upgrade 'php*'` |
+| PHP — lot 19/11/2026 (18 CVE) | PHP via paquet système, Ubuntu (aucune USN à ce jour) | [`php-novembre-2026/README.md`](php-novembre-2026/README.md) — avertissement Ubuntu | Surveiller `ubuntu.com/security/notices`, ou dépôt tiers Sury en dernier recours |
 | PHP2Shell | PHP via paquet système | [`php2shell/README.md`](php2shell/README.md) — tableau "Paquets Debian/Ubuntu" | `apt install --only-upgrade php8.x-*` |
 | PHP2Shell | Branche EOL sans rétroportage trouvé | [`php2shell/README.md`](php2shell/README.md) — section "Procédure" | Migrer vers 8.2/8.3/8.4/8.5 |
 | PHP2Shell | XAMPP/WAMP/IIS (Windows) | [`php2shell/README.md`](php2shell/README.md) | Voir §4b ci-dessus |

@@ -11,14 +11,15 @@ Les scripts de `php2shell/` et `broccoli2shell/` sont en **lecture seule par dé
 
 | Date | Faille (CVE) | Gravité | Exploitée ? | Dossier |
 |---|---|---|---|---|
-| 18/11/2026 | **NGINX2Root** — RCE non authentifiée via HTTP/2 · CVE-2026-123007, CVE-2026-123633 | 🔴 Critique | PoC public | [`nginx2root/`](nginx2root/) |
+| 19/11/2026 | **PHP** — lot de correctifs (18 CVE, use-after-free/RCE conditionnelles) · CVE-2026-129474, CVE-2026-129496, +16 autres | 🔴 Critique | non connue | [`php-novembre-2026/`](php-novembre-2026/) |
+| 18/11/2026 (maj 20/11) | **NGINX2Root** — RCE non authentifiée via HTTP/2 · CVE-2026-123007, CVE-2026-123633 | 🔴 Critique | PoC public | [`nginx2root/`](nginx2root/) |
 | 12/11/2026 | **sshole** — contournement de mot de passe OpenSSH (Alpine/musl) · CVE-2026-123158 | 🟠 Haute | ✅ KEV | [`sshole-cve-2026-123158/`](sshole-cve-2026-123158/) |
 | 10/11/2026 (maj 19/11) | **Fortinet** — lot de novembre (FGFM, API JRPC, OSPF) · CVE-2026-126261, CVE-2026-126170, CVE-2026-126253 | 🔴 Critique | non connue | [`fortinet-novembre-2026/`](fortinet-novembre-2026/) |
 | 10-12/11/2026 | **Proxmox VE** — lot d'avis (injection shell volume/upload → root, 5 avis mineurs) · pas de CVE | 🔴 Critique | non connue | [`proxmox-novembre-2026/`](proxmox-novembre-2026/) |
 | 05/11/2026 | **APT** — contournement de signature → root · CVE-2026-109518 | 🟠 Haute | non connue | [`cve-2026-109518/`](cve-2026-109518/) |
 | 05/11/2026 | **Noyau Linux** — use-after-free TCP/IPv4 · CVE-2026-98432 | 🔴 Critique | non connue | [`cve-2026-98432/`](cve-2026-98432/) |
 | 27/10/2026 | **Broccoli2Shell** — décodeur Brotli (Node, Python, .NET, IIS) · CVE-2026-111497 | 🔴 Critique | ✅ KEV | [`broccoli2shell/`](broccoli2shell/) |
-| 21/10/2026 | **PHP2Shell** — RCE PHP sans authentification · CVE-2026-109618/109619 | 🔴 Critique | non connue | [`php2shell/`](php2shell/) |
+| 21/10/2026 (maj 20/11) | **PHP2Shell** — RCE PHP sans authentification · CVE-2026-109618/109619 | 🔴 Critique | ✅ exploitée (campagne PAN-OS, hors KEV) | [`php2shell/`](php2shell/) |
 
 ## Technicien : êtes-vous touché ? En 3 étapes
 
