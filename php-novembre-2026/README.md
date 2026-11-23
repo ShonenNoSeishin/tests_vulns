@@ -10,20 +10,21 @@
 |---|---|
 | **Suis-je concerné ?** | Un serveur exécute PHP (Apache, nginx + PHP-FPM, IIS, XAMPP/WAMP, conteneur Docker PHP…), en version antérieure à **8.2.36 / 8.3.37 / 8.4.28 / 8.5.13** selon la branche installée. |
 | **Comment tester ?** | `sudo ./test_php-novembre-2026.sh --scan-images` (Linux) · `.\Test-PhpNovembre2026.ps1 -ScanImages` (Windows). Lecture seule. |
-| **Comment corriger ?** | `apt install --only-upgrade 'php*'` puis redémarrer php-fpm/Apache ; reconstruire les images Docker. **Debian a déjà le correctif en dépôt (vérifié 20/11/2026) ; Ubuntu n'a pas encore publié d'USN pour ce lot précis** — revérifier avec le script après toute mise à jour. |
+| **Comment corriger ?** | `apt install --only-upgrade 'php*'` puis redémarrer php-fpm/Apache ; reconstruire les images Docker. **Debian a déjà le correctif en dépôt ; Ubuntu aussi pour noble/php8.3 et jammy/php8.1 (confirmé 23/11/2026, sans USN dédiée)** — toute autre version Ubuntu : revérifier avec le script. |
 
 ## Explication courte
 
 Le 19/11/2026, PHP a publié une mise à jour de sécurité corrigeant 18 CVE réparties sur plusieurs composants du moteur (Core, CGI, Date, DOM, FPM, Session, SOAP, URI, Standard, Phar). La plupart nécessitent une configuration ou un enchaînement précis pour être exploitées (voir le détail des deux plus graves ci-dessous) — l'annonce officielle de PHP précise elle-même que les scénarios notés **CRITICAL** demandent une configuration non standard ou un montage peu commun. Ce n'est donc pas une RCE "point-and-shoot" en configuration par défaut, mais plusieurs de ces failles restent exploitables en conditions réalistes sur des configurations courantes (PHP-FPM derrière nginx/Apache, applications utilisant les sessions ou SOAP).
 
-### Les deux CVE confirmées les plus graves (CVSS 9.2, CVSS v4.0 — vérifié directement sur les avis GHSA officiels)
+### Les trois CVE confirmées les plus graves (CVSS 9.2, CVSS v4.0 — vérifié directement sur les avis GHSA officiels)
 
 | CVE | Composant | Branches affectées | Condition d'exploitation démontrée |
 |---|---|---|---|
 | **CVE-2026-129474** | Core — use-after-free dans les backtraces de méthode magique (`__call`/`__callStatic`) | **PHP 8.5.x uniquement** (< 8.5.13) | Nécessite `fatal_error_backtraces=1` (activé par défaut sur 8.5) **et** `zend.exception_ignore_args=0`. `php.ini-production` met cette dernière à `1` et bloque ce chemin d'attaque précis — `php.ini-development` la met à `0`. |
-| **CVE-2026-129496** | Date — use-after-free du cache de fuseau horaire | **Toutes les branches** (8.2, 8.3, 8.4, 8.5) | Le déclencheur exact dépend du mode (PHP-FPM : `auto_globals_jit=0` + cookies dans `request_order` ; Apache `mod_php` : requête POST dépassant la limite mémoire configurée + en-tête `Authorization` large). L'éditeur précise que ce sont des conditions de la démonstration, pas des prérequis généraux de la faille mémoire sous-jacente — ne pas supposer "pas concerné" juste parce que ces réglages précis sont absents.
+| **CVE-2026-129496** | Date — use-after-free du cache de fuseau horaire | **Toutes les branches** (8.2, 8.3, 8.4, 8.5) | Le déclencheur exact dépend du mode (PHP-FPM : `auto_globals_jit=0` + cookies dans `request_order` ; Apache `mod_php` : requête POST dépassant la limite mémoire configurée + en-tête `Authorization` large). L'éditeur précise que ce sont des conditions de la démonstration, pas des prérequis généraux de la faille mémoire sous-jacente — ne pas supposer "pas concerné" juste parce que ces réglages précis sont absents. |
+| **CVE-2026-129289** | FPM — contrebande de requête (request smuggling) via un corps de requête HTTP non lu (`php://input` non entièrement lu) | **Toutes les branches** (8.2, 8.3, 8.4, 8.5) ; code concerné présent depuis PHP 5.6 | Nécessite un frontal qui garde des connexions FastCGI persistantes vers PHP-FPM : nginx avec `fastcgi_keep_conn on`, Apache `mod_proxy_fcgi` avec `enablereuse=on`, ou une configuration HAProxy FastCGI équivalente. nginx/Apache en configuration par défaut (connexion fermée après chaque requête) ne sont **pas** exposés à cette attaque précise. Chaîne démontrée par l'éditeur : exécution de code PHP arbitraire via `SCRIPT_FILENAME`/`PHP_ADMIN_VALUE`/`auto_prepend_file=php://input`, sans interaction utilisateur. **LSAPI** est aussi cité comme pouvant désynchroniser le flux de requêtes, mais l'avis officiel **ne démontre pas** d'exécution de code via LSAPI, seulement une perturbation des requêtes suivantes — à ne pas présenter comme équivalent au vecteur FPM. |
 
-### Les 16 autres CVE du lot (sévérité individuelle non confirmée par avis officiel distinct à ce jour)
+### Les 15 autres CVE du lot (sévérité individuelle non confirmée par avis officiel distinct à ce jour)
 
 | CVE | Composant | Résumé |
 |---|---|---|
@@ -31,7 +32,6 @@ Le 19/11/2026, PHP a publié une mise à jour de sécurité corrigeant 18 CVE r�
 | CVE-2026-129538 | CGI | Lecture/écriture hors limites dans `php-cgi` pendant la correction de `PATH_INFO` |
 | CVE-2026-129501 | DOM | Double free pendant la sérialisation XML DOM |
 | CVE-2026-129291 | FPM | Use-after-free epoll dans PHP-FPM — **élévation de privilège locale**, pas une RCE distante |
-| CVE-2026-129289 | FPM | Contrebande de requête (request smuggling) via un corps de requête HTTP non lu |
 | CVE-2026-129292 | FPM | XSS sur l'endpoint de statut PHP-FPM (`/status`) |
 | CVE-2026-129481 | Session | Use-after-free après un arrêt de session interrompu |
 | CVE-2026-126714 | Session | Fichiers de session partiellement écrasés — peut mener à une RCE selon le contexte applicatif |
@@ -68,7 +68,14 @@ Une version >= au seuil de sa branche corrige **toutes** les CVE de ce lot appli
 >
 > Debian ne propose pas de paquet officiel `php8.3-*` ni `php8.5-*` (comme pour PHP2Shell) — seules les branches 8.2 (bookworm) et 8.4 (trixie) existent en paquet système Debian.
 >
-> ⚠️ **Piège Ubuntu, dans l'autre sens** : **aucune USN (Ubuntu Security Notice) retrouvée pour ce lot précis au 20/11/2026** (lot publié il y a seulement un jour — Canonical n'a pas encore backporté, ou pas encore publié l'avis). Le script le gère **sans deviner** : tout paquet PHP Ubuntu officiel ressort `[À VÉRIFIER]`, jamais `[CORRIGÉ]` ni `[VULNÉRABLE]` par déduction, tant qu'aucune table de correctif fiable n'existe pour cette combinaison — **à revérifier régulièrement** sur <https://ubuntu.com/security/notices/> et à mettre à jour dans ce script dès qu'une USN sort.
+> ✅ **Mise à jour du 23/11/2026 — Ubuntu a en fait déjà le correctif, sans USN dédiée** : contrairement au constat du 20/11/2026 (aucune USN retrouvée), un fetch direct du **security tracker officiel Ubuntu** (`ubuntu.com/security/CVE-xxxx`, équivalent du security-tracker Debian) confirme un paquet corrigé pour deux combinaisons, vérifié sur les trois CVE les plus graves (CVE-2026-129289, CVE-2026-129496, CVE-2026-129291) :
+>
+> | Distribution | Branche PHP | Paquet corrigé | Avis |
+> |---|---|---|---|
+> | Ubuntu 24.04 (noble) | 8.3 | `php8.3-*` **8.3.6-0ubuntu0.24.04.14** | Pas de USN dédiée — confirmé via le security tracker officiel |
+> | Ubuntu 22.04 (jammy) | 8.1 | `php8.1-*` **8.1.2-1ubuntu2.29** | Pas de USN dédiée — confirmé via le security tracker officiel |
+>
+> **Ces deux combinaisons précises sont désormais `[CORRIGÉ]`** dans le script (validé en conditions réelles sur un conteneur `ubuntu:24.04`, voir section Validation). **Toute autre combinaison Ubuntu (26.04/26.10, ou toute branche non listée ci-dessus) reste `[À VÉRIFIER]`** — pas de preuve rassemblée pour elles à ce jour, le script ne devine pas. À revérifier régulièrement sur <https://ubuntu.com/security/cves/> et à compléter dans ce script dès confirmation.
 
 ## Mitigation en attendant un correctif (branche 8.5 uniquement, CVE-2026-129474)
 
@@ -100,7 +107,12 @@ systemctl restart 'php*-fpm' apache2 nginx 2>/dev/null
 ```
 Relancer le script : doit afficher `[CORRIGÉ]`.
 
-**Pour Ubuntu** : tant qu'aucune USN n'est publiée pour ce lot, `apt install --only-upgrade 'php*'` ne corrigera rien de spécifique à ce lot (le script le signalera en `[À VÉRIFIER]`, pas en `[CORRIGÉ]`, précisément pour éviter la fausse réassurance). Surveiller <https://ubuntu.com/security/notices/> et relancer le script régulièrement jusqu'à ce qu'une USN couvrant ce lot sorte.
+**Pour Ubuntu 24.04 (php8.3) et 22.04 (php8.1)** : le correctif est déjà en dépôt (voir ci-dessus), `apt install --only-upgrade 'php*'` suffit :
+```bash
+apt update && apt install --only-upgrade 'php*'
+systemctl restart 'php*-fpm' apache2 nginx 2>/dev/null
+```
+**Pour toute autre version Ubuntu** : tant qu'aucune confirmation n'est obtenue pour ce lot, `apt install --only-upgrade 'php*'` ne corrigera peut-être rien de spécifique à ce lot (le script le signalera en `[À VÉRIFIER]`, pas en `[CORRIGÉ]`, précisément pour éviter la fausse réassurance). Surveiller <https://ubuntu.com/security/cves/?q=php> et relancer le script régulièrement.
 
 **Image Docker officielle PHP** :
 ```bash
@@ -113,17 +125,18 @@ docker compose up -d --force-recreate
 ## Limites connues
 
 - Ce script est un inventaire de versions, pas un test d'intrusion : il ne prouve pas l'absence de compromission passée.
-- La vérification par paquet distro (bash uniquement) ne couvre que Debian 12/13 pour ce lot précis. Ubuntu ressort systématiquement `[À VÉRIFIER]` tant qu'aucune USN n'est référencée (voir avertissement ci-dessus) — ce n'est pas un défaut du script, c'est le résultat honnête de l'absence d'information officielle à ce jour.
+- La vérification par paquet distro (bash uniquement) couvre Debian 12/13 et, depuis le 23/11/2026, Ubuntu 24.04/php8.3 et 22.04/php8.1 pour ce lot précis. Toute autre combinaison Ubuntu ressort systématiquement `[À VÉRIFIER]` (voir avertissement ci-dessus) — ce n'est pas un défaut du script, c'est le résultat honnête de l'absence de preuve rassemblée pour ces combinaisons à ce jour.
 - `Test-PhpNovembre2026.ps1` (Windows) ne fait pas de vérification par paquet : pas d'équivalent `dpkg`/APT sous Windows pour XAMPP/WAMP/IIS.
 - La plupart des 18 CVE nécessitent des conditions précises (voir tableaux ci-dessus) : un résultat `[VULNÉRABLE]` signale une version non corrigée, pas une confirmation d'exploitabilité immédiate dans votre configuration exacte — mais mettre à jour reste la seule action sûre.
 - `kubectl`/`lxc`/`nerdctl`/`crictl` sont seulement signalés comme présents, pas sondés automatiquement.
 
-## Validation (VM de Lab, 20/11/2026)
+## Validation (VM de Lab, 20/11/2026 et 23/11/2026)
 
 Aucune installation PHP trouvée sur la VM de Lab elle-même (hôte ni conteneurs actifs — voir `ir-context/deep-dive/php-novembre-2026/lab-results.md`, privé). La logique de détection a été validée avec des conteneurs Debian/Ubuntu jetables :
 - Conteneur Debian 13 (trixie) à jour : paquet réel `php8.4-cli 8.4.28-1~deb13u1` → `[CORRIGÉ]` (confirmé en conditions réelles, le dépôt Debian a déjà le correctif).
 - Conteneur Debian 12 (bookworm) à jour : paquet réel `php8.2-cli 8.2.36-1~deb12u1` → `[CORRIGÉ]`.
-- Conteneur Ubuntu 24.04 à jour : paquet réel `php8.3-cli 8.3.6-0ubuntu0.24.04.14` → `[À VÉRIFIER]` (confirmé : aucune USN pour ce lot, le script ne devine pas).
+- Conteneur Ubuntu 24.04 à jour (20/11/2026) : paquet réel `php8.3-cli 8.3.6-0ubuntu0.24.04.14` → `[À VÉRIFIER]` à l'époque (aucune USN retrouvée ce jour-là).
+- **Re-test du même conteneur Ubuntu 24.04 le 23/11/2026, après mise à jour du script** : même paquet réel `php8.3-cli 8.3.6-0ubuntu0.24.04.14` → **`[CORRIGÉ]`**, confirmant que la version déjà installée au 20/11 contenait en réalité déjà le correctif (confirmé entre-temps via le security tracker officiel Ubuntu, voir avertissement ci-dessus).
 - Comparaisons de version `dpkg --compare-versions` validées directement pour les deux sens (vulnérable avant patch, corrigé après).
 
 ## Impact sur nos solutions
@@ -142,7 +155,7 @@ Aucune installation PHP trouvée sur la VM de Lab elle-même (hôte ni conteneur
 | LibreNMS | À vérifier | Application PHP -- impact dépend de la version PHP utilisée par l'hôte |
 | Observium | À vérifier | Application PHP -- impact dépend de la version PHP utilisée par l'hôte |
 | Debian | Non impacté | L'OS lui-même n'est pas en cause -- paquet PHP déjà corrigé en dépôt (voir ci-dessus) |
-| Ubuntu | Non impacté | L'OS lui-même n'est pas en cause -- mais aucune USN pour ce lot à ce jour, voir avertissement ci-dessus |
+| Ubuntu | Non impacté | L'OS lui-même n'est pas en cause -- correctif confirmé en dépôt pour 24.04/php8.3 et 22.04/php8.1 depuis le 23/11/2026 (sans USN dédiée), à vérifier pour les autres versions |
 | Windows Server (2012/2016/2019/2022/2025) | À vérifier | Impacté seulement si IIS+PHP via FastCGI est configuré -- voir Test-PhpNovembre2026.ps1 |
 | SMB (Samba, Debian) | Non impacté |  |
 | SFTP (Debian) | Non impacté |  |
@@ -172,5 +185,6 @@ Aucune installation PHP trouvée sur la VM de Lab elle-même (hôte ni conteneur
 - [php.net — ChangeLog PHP 8](https://www.php.net/ChangeLog-8.php)
 - GHSA-8mjj-2r7p-4hg2 (CVE-2026-129474) : <https://github.com/php/php-src/security/advisories/GHSA-8mjj-2r7p-4hg2>
 - GHSA-gr4f-wgx5-jpfv (CVE-2026-129496) : <https://github.com/php/php-src/security/advisories/GHSA-gr4f-wgx5-jpfv>
+- GHSA-qc49-hpvq-g2w6 (CVE-2026-129289) : <https://github.com/php/php-src/security/advisories/GHSA-qc49-hpvq-g2w6>
 - Debian Security Tracker : <https://security-tracker.debian.org/>
-- Ubuntu Security Notices : <https://ubuntu.com/security/notices/>
+- Ubuntu Security Tracker : <https://ubuntu.com/security/cves/?q=php>

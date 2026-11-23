@@ -109,11 +109,17 @@ declare -A DEB_PHP_FIXED=(
   ["12:8.2"]="8.2.36-1~deb12u1"
   ["13:8.4"]="8.4.28-1~deb13u1"
 )
-# Ubuntu : AUCUNE USN retrouvée pour ce lot précis au 20/11/2026 (lot publié la veille, 19/11) --
-# table volontairement VIDE plutôt que de deviner. Un paquet PHP Ubuntu "officiel" (motif attendu
-# par looks_like_distro_build) tombera donc systématiquement en [À VÉRIFIER] ci-dessous, jamais en
-# [CORRIGÉ] ni [VULNÉRABLE] par déduction -- à mettre à jour dès qu'une USN sort pour ce lot.
+# Ubuntu : aucune USN dédiée retrouvée pour ce lot, mais le security tracker officiel Ubuntu
+# (ubuntu.com/security/CVE-xxxx, équivalent du security-tracker Debian) confirme un paquet corrigé
+# pour deux combinaisons, vérifié par fetch direct le 23/11/2026 sur CVE-2026-129289 (FPM, request
+# smuggling, CVSS 9.2) ET CVE-2026-129496 (Date, CVSS 9.2, toutes branches) ET CVE-2026-129291
+# (FPM, EoP) simultanément -- même version de paquet pour les trois, donc considérée comme le
+# seuil de correctif du lot pour ces deux combinaisons précises. Les autres combinaisons Ubuntu
+# (26.04/26.10 php8.5, ou toute branche non listée ci-dessous) restent volontairement ABSENTES de
+# cette table -- pas de preuve rassemblée pour elles à ce jour, donc [À VÉRIFIER] plutôt que deviner.
 declare -A UBU_PHP_FIXED=(
+  ["24.04:8.3"]="8.3.6-0ubuntu0.24.04.14"
+  ["22.04:8.1"]="8.1.2-1ubuntu2.29"
 )
 
 VULN_COUNT=0; OK_COUNT=0; UNK_COUNT=0
@@ -396,7 +402,7 @@ elif [[ "$SCAN_IMAGES" -eq 1 ]]; then
 else
   echo "Confiance : PARTIELLE — mode lecture seule : seuls l'hôte et les conteneurs ACTIFS ont été inspectés. Une image Docker/Podman locale non démarrée peut contenir un PHP vulnérable sans apparaître ici. Relancer avec --scan-images pour être certain."
 fi
-echo "[LIMITE] Ce script n'exploite pas la faille et ne prouve pas l'absence de compromission. Ubuntu : aucune USN référencée pour CE lot au 20/11/2026 -- tout paquet Ubuntu officiel ressort [À VÉRIFIER], jamais [CORRIGÉ] par déduction (voir README). Images tierces et kubectl/lxc non sondés en profondeur."
+echo "[LIMITE] Ce script n'exploite pas la faille et ne prouve pas l'absence de compromission. Ubuntu : correctif confirmé via le security tracker officiel (pas de USN dédiée) seulement pour noble/php8.3 et jammy/php8.1 (voir README) -- toute autre combinaison Ubuntu ressort [À VÉRIFIER], jamais [CORRIGÉ] par déduction. Images tierces et kubectl/lxc non sondés en profondeur."
 echo "Références : https://www.php.net/  |  https://security-tracker.debian.org/  |  https://ubuntu.com/security/notices/"
 
 case "$VERDICT" in

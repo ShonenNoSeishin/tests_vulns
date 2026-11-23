@@ -65,6 +65,15 @@ Un instantané public (Shodan, 10/11/2026, avant correctif) indiquait que **98,9
 > une action prioritaire.
 >
 > **nginx Plus** n'est pas comparé automatiquement : sa numérotation (ex. `37.0.8.1`) ne se compare pas directement aux versions open source. Le script le signale en `[À VÉRIFIER]` plutôt que de risquer un faux résultat — comparer manuellement sur le portail support F5.
+>
+> ⚠️ **3CX — build nginx embarqué, INDÉPENDANT des paquets distro (confirmé officiellement le
+> 20/11/2026)** : 3CX embarque son propre nginx (sert le Web Client et l'Admin Console), avec un
+> build propre à l'éditeur — **ni le correctif Debian (DLA-4918-1/DSA-6642-1) ni le correctif
+> Ubuntu (USN-9159-1) ne corrigent ce nginx-là**, même sur un PBX self-managed Linux. Seule la mise
+> à jour 3CX elle-même corrige ce binaire. Correctif officiel confirmé par le CTO de 3CX :
+> **V20 Update 10, build 20.0.10.1801** (inclut nginx 1.30.7), disponible pour PBX self-managed
+> **Linux et Windows**. 3CX Hosted/SMB a déjà été patché automatiquement côté 3CX dès le 20/11/2026,
+> aucune action requise pour ces instances. Voir <https://www.3cx.com/blog/news/nginx-security-update/>.
 
 ## Démonstration : comment vérifier qu'une cible est vulnérable
 
@@ -177,7 +186,7 @@ Désactiver HTTP/2 réduit l'exposition aux **deux** RCE (pas aux 8 autres CVE d
 | LXC | À vérifier | Dépend si le conteneur fait tourner nginx en version vulnérable |
 | Veeam | Non impacté |  |
 | Nakivo | Non impacté |  |
-| 3CX | **Impacté** | 3CX (Linux, Debian) utilise nginx comme serveur web / reverse-proxy de la console et des clients web : lancer le script sur le serveur 3CX ; correctif via les mises à jour 3CX/Debian dès leur publication, HTTP/2 off en attendant |
+| 3CX | **Impacté** | Confirmé officiellement par 3CX (20/11/2026) : nginx embarqué, build propre à 3CX indépendant des paquets distro -- correctif = mise à jour 3CX **V20 Update 10 build 20.0.10.1801** (self-managed Linux/Windows), pas une mise à jour système. Hosted/SMB déjà patché par 3CX. |
 | Elastix | Non impacté |  |
 | Andrisoft WANGuard | Non impacté |  |
 | Datalust Seq | Non impacté |  |
@@ -214,5 +223,6 @@ Désactiver HTTP/2 réduit l'exposition aux **deux** RCE (pas aux 8 autres CVE d
 - [Wiz — analyse technique](https://www.wiz.io/blog/nginx-http2-rce-vulnerabilities)
 - [The Hacker News](https://thehackernews.com/2026/11/10-year-old-nginx-http2-flaw-lets.html)
 - [Qualys — NGINX2Root, FAQ et détection](https://blog.qualys.com/product-tech/patch-management/2026/11/18/nginx2root-five-nginx-flaws-led-by-cve-2026-123007-how-to-find-mitigate-and-patch-now)
+- [3CX — nginx security update (V20 Update 10)](https://www.3cx.com/blog/news/nginx-security-update/)
 - Debian Security Tracker : <https://security-tracker.debian.org/>
 - Ubuntu Security Notices : <https://ubuntu.com/security/notices/>

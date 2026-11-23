@@ -3,7 +3,7 @@ title: "NGINX2Root — RCE non authentifiée via HTTP/2 dans nginx"
 cves: [CVE-2026-123007, CVE-2026-123633]
 severity: critical
 published: 2026-11-18
-updated: 2026-11-20
+updated: 2026-11-23
 exploited: false
 kev: false
 summary: >-
@@ -27,7 +27,7 @@ impact:
   - {product: "LXC", status: "to_check", note: "Dépend si le conteneur fait tourner nginx en version vulnérable"}
   - {product: "Veeam", status: "not_impacted"}
   - {product: "Nakivo", status: "not_impacted"}
-  - {product: "3CX", status: "impacted", note: "3CX (Linux, Debian) utilise nginx comme serveur web / reverse-proxy de la console et des clients web : lancer le script sur le serveur 3CX ; correctif via les mises à jour 3CX/Debian dès leur publication, HTTP/2 off en attendant"}
+  - {product: "3CX", status: "impacted", note: "Confirmé officiellement par 3CX (20/11/2026) : nginx embarqué, build propre indépendant des paquets distro -- correctif = mise à jour 3CX V20 Update 10 build 20.0.10.1801 (self-managed Linux/Windows), pas une mise à jour système. Hosted/SMB déjà patché par 3CX."}
   - {product: "Elastix", status: "not_impacted"}
   - {product: "Andrisoft WANGuard", status: "not_impacted"}
   - {product: "Datalust Seq", status: "not_impacted"}
@@ -72,7 +72,7 @@ fix:
   - {for: "Image Docker officielle", command: "docker pull nginx:<tag-reconstruit> && docker compose up -d --force-recreate"}
   - {for: "Contournement temporaire en attendant (HTTP/2 seulement, ne couvre pas les 8 autres CVE du lot)", command: "Retirer le paramètre http2 des directives listen, ou http2 off; puis nginx -s reload"}
   - {for: "Étape 4 -- toujours, après l'étape 3 ou tout autre correctif", command: "Relancer test_nginx2root.sh / Test-Nginx2Root.ps1 une dernière fois et confirmer [CORRIGÉ] (version >= 1.30.7/1.31.9, ou paquet >= au seuil Debian/Ubuntu du README) avant de considérer la faille traitée."}
-fixed_versions: "nginx 1.30.7 (stable), 1.31.9 (mainline) ; nginx Plus 37.0.8.1/37.3.0.1 et 37.0.7.1/37.2.0.1 selon le CVE ; paquet Debian 13 (trixie) 1.26.3-3+deb13u11 (DSA-6642-1) ; paquet Debian 12 (bookworm) 1.22.1-9+deb12u11 (DLA-4918-1) ; paquet Ubuntu selon la table README (USN-9159-1)."
+fixed_versions: "nginx 1.30.7 (stable), 1.31.9 (mainline) ; nginx Plus 37.0.8.1/37.3.0.1 et 37.0.7.1/37.2.0.1 selon le CVE ; paquet Debian 13 (trixie) 1.26.3-3+deb13u11 (DSA-6642-1) ; paquet Debian 12 (bookworm) 1.22.1-9+deb12u11 (DLA-4918-1) ; paquet Ubuntu selon la table README (USN-9159-1) ; 3CX self-managed V20 Update 10 build 20.0.10.1801 (nginx embarqué, correctif distinct du paquet système)."
 docs: [README.md]
 references:
   - {title: "Avis officiel nginx", url: "https://nginx.org/en/security_advisories.html"}
@@ -82,3 +82,4 @@ references:
   - {title: "DSA-6642-1 — Debian 13 (trixie)", url: "https://www.debian.org/security/2026/dsa-6642"}
   - {title: "DLA-4918-1 — Debian 12 (bookworm, LTS)", url: "https://www.debian.org/lts/security/2026/dla-4918"}
   - {title: "USN-9159-1 — Ubuntu", url: "https://ubuntu.com/security/notices/USN-9159-1"}
+  - {title: "3CX — nginx security update (V20 Update 10)", url: "https://www.3cx.com/blog/news/nginx-security-update/"}
