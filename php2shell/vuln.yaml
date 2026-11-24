@@ -3,9 +3,9 @@ title: "PHP2Shell — exécution de code à distance dans PHP (sans authentifica
 cves: [CVE-2026-109618, CVE-2026-109619]
 severity: critical
 published: 2026-10-21
-updated: 2026-11-20
+updated: 2026-11-24
 exploited: true
-kev: false
+kev: true
 summary: >-
   Deux failles du moteur PHP lui-même (PHP-FPM, mod_php, php-cgi, FrankenPHP, LiteSpeed) permettent d'exécuter du code via une simple requête
   HTTP, sans authentification (CVSS 4.0 : 9.2). Attention aux paquets Debian/Ubuntu : le correctif est rétroporté sans changer le numéro de
@@ -14,7 +14,9 @@ summary: >-
   concerné selon l'éditeur) -- pas de confirmation d'exploitation en dehors de ce vecteur PAN-OS spécifique à ce jour, mais le moteur PHP
   lui-même reste concerné partout où une version vulnérable tourne. PHP a publié un NOUVEAU lot de correctifs de sécurité le 19/11/2026 (18 CVE
   distinctes, PHP 8.2.36/8.3.37/8.4.28/8.5.13, aucune en commun avec CVE-2026-109618/109619) -- lot séparé, non couvert par ce dossier, à
-  traiter via un deep-dive dédié si le parc expose des applications PHP directement.
+  traiter via un deep-dive dédié si le parc expose des applications PHP directement. Correction du 24/11/2026 : CVE-2026-109618 est bien
+  inscrite au catalogue KEV CISA depuis le 26/10/2026 (confirmé par fetch direct du flux JSON officiel) -- ce champ était resté à `false` par
+  erreur depuis la création du dossier.
 affects:
   - "PHP 8.5 < 8.5.12, 8.4 < 8.4.27, 8.3 < 8.3.36, 8.2 < 8.2.35"
   - "PHP ≤ 8.1 (fin de vie, sans correctif officiel)"
@@ -76,3 +78,4 @@ docs: [README.md]
 references:
   - {title: "Debian security tracker CVE-2026-109618", url: "https://security-tracker.debian.org/tracker/CVE-2026-109618"}
   - {title: "Unit42 — Threat Brief PHP2Shell (exploitation confirmée)", url: "https://unit42.paloaltonetworks.com/cve-2026-109618-cve-2026-109619/"}
+  - {title: "CISA — Known Exploited Vulnerabilities Catalog", url: "https://www.cisa.gov/known-exploited-vulnerabilities-catalog"}
