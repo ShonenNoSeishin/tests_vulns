@@ -1,0 +1,84 @@
+id: apache2root
+title: "Apache2Root — RCE non authentifiée via mod_http2 dans Apache HTTP Server"
+cves: [CVE-2026-119618]
+severity: critical
+published: 2026-11-11
+updated: 2026-11-24
+exploited: false
+kev: false
+summary: >-
+  Race condition (CWE-362) dans assign_headers() du module mod_http2 d'Apache HTTP Server, pouvant mener à une exécution de code à
+  distance sans authentification quand le module HTTP/2 est chargé. CVSS 3.1 : 8.1 (High), AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H. Pas
+  d'exploitation active connue (SSVC CISA : exploitation none). Corrigé en Apache httpd 2.4.71 (11/11/2026). mod_http2 n'est PAS chargé
+  par défaut sur une installation Debian/Ubuntu standard -- il faut l'avoir activé explicitement (a2enmod http2) pour être exposé.
+  Debian (DLA-4902-1 bookworm, DSA-6620-1 trixie) et Ubuntu (USN-9090-1) ont rétroporté le correctif sans changer le numéro de version
+  amont -- le script compare le paquet dpkg, jamais 'apache2 -v' seul. Affecte aussi, séparément, le module standalone du projet GitHub
+  icing/mod_h2 (2.0.8-2.0.42, corrigé en 2.0.43), dont la version ne se déduit pas du coeur Apache.
+affects:
+  - "Apache HTTP Server 2.4.55 à 2.4.70 (mod_http2 intégré), avec le module mod_http2 chargé"
+  - "Module standalone icing/mod_h2 (GitHub) 2.0.8 à 2.0.42"
+tags: [apache, httpd, web, http2, rce]
+concerned:
+  - "Un serveur fait tourner Apache httpd (apache2/httpd) avec le module mod_http2 chargé, en version 2.4.55 à 2.4.70."
+not_concerned:
+  - "Aucun Apache httpd installé, module mod_http2 non chargé, ou version déjà >= 2.4.71."
+impact:
+  - {product: "Proxmox VE", status: "not_impacted", note: "L'interface de gestion Proxmox (pveproxy) n'utilise ni Apache ni nginx"}
+  - {product: "Docker", status: "to_check", note: "Dépend si un conteneur fait tourner Apache httpd avec mod_http2 chargé en version vulnérable"}
+  - {product: "LXC", status: "to_check", note: "Dépend si le conteneur fait tourner Apache httpd avec mod_http2 chargé en version vulnérable"}
+  - {product: "Veeam", status: "not_impacted"}
+  - {product: "Nakivo", status: "not_impacted"}
+  - {product: "3CX", status: "not_impacted", note: "3CX embarque son propre nginx, pas Apache httpd (voir nginx2root)"}
+  - {product: "Elastix", status: "to_check", note: "FreePBX/Elastix utilise traditionnellement Apache httpd pour son interface d'administration -- vérifier la version et si mod_http2 est chargé"}
+  - {product: "Andrisoft WANGuard", status: "to_check", note: "Console web PHP, serveur web sous-jacent non documenté publiquement -- vérifier selon le déploiement"}
+  - {product: "Datalust Seq", status: "not_impacted", note: "Application .NET avec serveur web intégré (Kestrel), pas Apache"}
+  - {product: "LibreNMS", status: "to_check", note: "Application PHP -- documentation communautaire couvrant Apache et nginx selon le déploiement"}
+  - {product: "Observium", status: "to_check", note: "Aucune information fiable trouvée sur le serveur web par défaut"}
+  - {product: "Debian", status: "not_impacted", note: "L'OS lui-même n'est pas en cause -- vérifier le paquet apache2 installé dessus séparément"}
+  - {product: "Ubuntu", status: "not_impacted", note: "L'OS lui-même n'est pas en cause -- vérifier le paquet apache2 installé dessus séparément"}
+  - {product: "Windows Server (2012/2016/2019/2022/2025)", status: "to_check", note: "Apache httpd rare sous Windows mais possible (XAMPP/WAMP/Apache Lounge) pour des applications spécifiques"}
+  - {product: "SMB (Samba, Debian)", status: "not_impacted"}
+  - {product: "SFTP (Debian)", status: "not_impacted"}
+  - {product: "Cisco", status: "not_impacted"}
+  - {product: "Ubiquiti", status: "not_impacted"}
+  - {product: "HP/Aruba", status: "not_impacted"}
+  - {product: "FortiGate", status: "not_impacted"}
+  - {product: "FortiAnalyzer", status: "not_impacted"}
+  - {product: "FortiManager", status: "not_impacted"}
+  - {product: "Sophos", status: "not_impacted"}
+  - {product: "nginx", status: "not_impacted", note: "nginx n'est pas Apache httpd ; si les deux coexistent, vérifier Apache séparément"}
+  - {product: "Certbot", status: "not_impacted", note: "Certbot lui-même n'est pas Apache ; son plugin Apache ne fait qu'éditer la configuration TLS"}
+  - {product: "Odoo (self-hosted)", status: "to_check", note: "Odoo tourne en général derrière nginx, mais un déploiement pourrait utiliser Apache comme reverse-proxy frontal"}
+  - {product: "Nextcloud", status: "to_check", note: "La documentation officielle Nextcloud présente Apache comme méthode d'installation principale"}
+  - {product: "JumpCloud", status: "not_impacted"}
+  - {product: "Python", status: "not_impacted", note: "Le moteur Python n'est pas en cause, même via mod_wsgi dans un Apache vulnérable -- vérifier Apache séparément"}
+  - {product: "Django", status: "not_impacted", note: "Même remarque que Python"}
+  - {product: "React", status: "not_impacted"}
+  - {product: "PHP", status: "not_impacted", note: "Le moteur PHP n'est pas en cause, même via mod_php dans un Apache vulnérable -- vérifier Apache séparément"}
+  - {product: "MikroTik", status: "not_impacted"}
+  - {product: "Ceph", status: "not_impacted"}
+  - {product: "QEMU-KVM", status: "not_impacted"}
+tests:
+  - {os: linux, label: "Linux / macOS (hôte + conteneurs)", file: test_apache2root.sh, run: "chmod +x test_apache2root.sh && sudo ./test_apache2root.sh --scan-images", note: "Lecture seule. --scan-images inspecte aussi les images locales."}
+  - {os: windows, label: "Windows (XAMPP/WAMP/Apache Lounge, Docker Desktop)", file: Test-Apache2Root.ps1, run: ".\\Test-Apache2Root.ps1 -ScanImages", note: "À lancer dans PowerShell, en administrateur de préférence."}
+results:
+  - {status: "VULNÉRABLE", meaning: "Version Apache vulnérable confirmée, mod_http2 chargé.", action: "Mettre à jour vers 2.4.71 (voir correction), puis redémarrer apache2."}
+  - {status: "À VÉRIFIER", meaning: "Modules illisibles, chemin de module non standard (mod_h2 séparé), ou version illisible.", action: "Comparer manuellement (README)."}
+  - {status: "CORRIGÉ", meaning: "Version >= 2.4.71, mod_http2 chargé.", action: "Rien."}
+  - {status: "NON CONCERNÉ", meaning: "Apache absent, ou mod_http2 non chargé.", action: "Rien dans l'immédiat pour cette CVE précise ; mettre à jour par hygiène générale reste recommandé."}
+fix:
+  - {for: "Debian / Ubuntu (paquet système, correctif déjà rétroporté depuis le 11/11/2026)", command: "apt update && apt install --only-upgrade apache2 && systemctl restart apache2"}
+  - {for: "Image Docker officielle httpd", command: "docker pull httpd:2.4 && docker compose up -d --force-recreate   # un tag figé (ex. httpd:2.4.70) reste vulnérable, vérifier le tag réellement utilisé"}
+  - {for: "Windows (XAMPP/WAMP/Apache Lounge) -- pas de rétroportage, mise à jour amont obligatoire", command: "Télécharger et réinstaller Apache httpd >= 2.4.71 depuis https://www.apachelounge.com/download/, conserver conf\\httpd.conf, redémarrer le service"}
+  - {for: "Mitigation temporaire en attendant (réduit l'exposition à cette CVE uniquement)", command: "a2dismod http2 && systemctl restart apache2"}
+  - {for: "Module standalone mod_h2 (projet GitHub icing/mod_h2, indépendant du paquet système)", command: "Mettre à jour vers >= 2.0.43 depuis https://github.com/icing/mod_h2/releases"}
+  - {for: "Vérification finale, toujours", command: "Relancer test_apache2root.sh / Test-Apache2Root.ps1 et confirmer [CORRIGÉ] ou [NON CONCERNÉ] avant de considérer la faille traitée."}
+fixed_versions: "Apache HTTP Server 2.4.71 ; module standalone icing/mod_h2 2.0.43 ; paquet Debian 13 (trixie) 2.4.71-1~deb13u1 (DSA-6620-1) ; paquet Debian 12 (bookworm) 2.4.71-1~deb12u1 (DLA-4902-1) ; paquet Ubuntu selon la table README (USN-9090-1)."
+docs: [README.md]
+references:
+  - {title: "Avis officiel Apache HTTP Server 2.4", url: "https://httpd.apache.org/security/vulnerabilities_24.html"}
+  - {title: "NVD — CVE-2026-119618", url: "https://nvd.nist.gov/vuln/detail/CVE-2026-119618"}
+  - {title: "DSA-6620-1 — Debian 13 (trixie)", url: "https://www.debian.org/security/2026/dsa-6620"}
+  - {title: "DLA-4902-1 — Debian 12 (bookworm, LTS)", url: "https://www.debian.org/lts/security/2026/dla-4902"}
+  - {title: "USN-9090-1 — Ubuntu", url: "https://ubuntu.com/security/notices/USN-9090-1"}
+  - {title: "Module standalone icing/mod_h2 (GitHub)", url: "https://github.com/icing/mod_h2"}
