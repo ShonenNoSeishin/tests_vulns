@@ -3,13 +3,14 @@ title: "Apache2Root — RCE non authentifiée via mod_http2 dans Apache HTTP Ser
 cves: [CVE-2026-119618]
 severity: critical
 published: 2026-11-11
-updated: 2026-11-24
-exploited: false
+updated: 2026-11-25
+exploited: true
 kev: false
 summary: >-
   Race condition (CWE-362) dans assign_headers() du module mod_http2 d'Apache HTTP Server, pouvant mener à une exécution de code à
-  distance sans authentification quand le module HTTP/2 est chargé. CVSS 3.1 : 8.1 (High), AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H. Pas
-  d'exploitation active connue (SSVC CISA : exploitation none). Corrigé en Apache httpd 2.4.71 (11/11/2026). mod_http2 n'est PAS chargé
+  distance sans authentification quand le module HTTP/2 est chargé. CVSS 3.1 : 8.1 (High), AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H. Exploitation
+  active signalée depuis le 25/11/2026 par la Cyber Security Agency of Singapore (un PoC public existerait), mais pas encore au catalogue
+  KEV CISA à ce jour. Corrigé en Apache httpd 2.4.71 (11/11/2026). mod_http2 n'est PAS chargé
   par défaut sur une installation Debian/Ubuntu standard -- il faut l'avoir activé explicitement (a2enmod http2) pour être exposé.
   Debian (DLA-4902-1 bookworm, DSA-6620-1 trixie) et Ubuntu (USN-9090-1) ont rétroporté le correctif sans changer le numéro de version
   amont -- le script compare le paquet dpkg, jamais 'apache2 -v' seul. Affecte aussi, séparément, le module standalone du projet GitHub
@@ -82,3 +83,4 @@ references:
   - {title: "DLA-4902-1 — Debian 12 (bookworm, LTS)", url: "https://www.debian.org/lts/security/2026/dla-4902"}
   - {title: "USN-9090-1 — Ubuntu", url: "https://ubuntu.com/security/notices/USN-9090-1"}
   - {title: "Module standalone icing/mod_h2 (GitHub)", url: "https://github.com/icing/mod_h2"}
+  - {title: "CSA Singapour — Active Exploitation of Vulnerability in Apache HTTP Server's mod_http2", url: "https://www.csa.gov.sg/alerts-and-advisories/alerts/al-2026-164/"}

@@ -1,6 +1,6 @@
 # CVE-2026-119618 — « Apache2Root »
 
-> Une faille critique dans **mod_http2** d'Apache HTTP Server, corrigée le **11/11/2026**. Race condition (CWE-362) dans la fonction `assign_headers()` pouvant mener à une **exécution de code à distance SANS authentification**. CVSS 3.1 : **8.1 (High)**, `AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H` — « AC:H » car c'est une condition de concurrence, pas un bug trivial à déclencher à chaque tentative. Pas d'exploitation active connue à ce jour (SSVC CISA : `exploitation: none`). Affecte aussi, séparément, le module standalone du projet GitHub **icing/mod_h2** (même code source, packagé à part).
+> Une faille critique dans **mod_http2** d'Apache HTTP Server, corrigée le **11/11/2026**. Race condition (CWE-362) dans la fonction `assign_headers()` pouvant mener à une **exécution de code à distance SANS authentification**. CVSS 3.1 : **8.1 (High)**, `AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H` — « AC:H » car c'est une condition de concurrence, pas un bug trivial à déclencher à chaque tentative. **⚠️ Exploitation active signalée depuis le 25/11/2026** par la Cyber Security Agency of Singapore (PoC public qui existerait) — toujours absente du catalogue KEV CISA à ce jour, voir « Statut d'exploitation » ci-dessous. Affecte aussi, séparément, le module standalone du projet GitHub **icing/mod_h2** (même code source, packagé à part).
 
 ## En 30 secondes
 
@@ -9,6 +9,17 @@
 | **Suis-je concerné ?** | Un serveur fait tourner **Apache httpd** (`apache2`/`httpd`) avec le **module `mod_http2` chargé**, en version **2.4.55 à 2.4.70**. Si `mod_http2` n'est pas chargé, vous n'êtes pas concerné par cette CVE précise (mais patchez quand même dès que possible). |
 | **Comment tester ?** | `sudo ./test_apache2root.sh --scan-images` (Linux) · `.\Test-Apache2Root.ps1 -ScanImages` (Windows). Lecture seule, aucune requête envoyée à un serveur distant. |
 | **Comment corriger ?** | `apt install --only-upgrade apache2` (Debian/Ubuntu, correctif déjà rétroporté depuis le 11/11/2026 pour les versions supportées) puis **revérifier avec le script**. Sous Windows (XAMPP/WAMP/Apache Lounge) : pas de rétroportage, réinstallation manuelle en 2.4.71+ (voir ci-dessous). |
+
+## Statut d'exploitation (mis à jour le 25/11/2026)
+
+La Cyber Security Agency of Singapore (organisme gouvernemental) a publié une alerte
+(« Active Exploitation of Vulnerability in Apache HTTP Server's mod_http2 ») indiquant que cette
+vulnérabilité « is reportedly being actively exploited, and a proof-of-concept exploit is
+publicly available ». Le mot « reportedly » est de l'avis lui-même : la CSA ne cite pas sa propre
+source primaire indépendante, et ni l'avis officiel Apache ni le catalogue KEV CISA (vérifié par
+fetch direct du flux officiel) ne listent cette CVE comme exploitée à ce jour. **À traiter comme
+une exploitation active probable, pas encore comme une confirmation KEV formelle — mais cela ne
+change rien à la priorité de correction : patcher immédiatement si `mod_http2` est chargé.**
 
 ## Explication courte
 
@@ -168,5 +179,6 @@ Dans tous les cas : **relancer `test_apache2root.sh`/`Test-Apache2Root.ps1` une 
 - [DLA-4902-1 — Debian 12 (bookworm, LTS)](https://www.debian.org/lts/security/2026/dla-4902)
 - [USN-9090-1 — Ubuntu](https://ubuntu.com/security/notices/USN-9090-1)
 - [Module standalone icing/mod_h2 (GitHub)](https://github.com/icing/mod_h2)
+- [CSA Singapour — Active Exploitation of Vulnerability in Apache HTTP Server's mod_http2](https://www.csa.gov.sg/alerts-and-advisories/alerts/al-2026-164/)
 - Debian Security Tracker : <https://security-tracker.debian.org/tracker/CVE-2026-119618>
 - Ubuntu Security Notices : <https://ubuntu.com/security/CVE-2026-119618>
