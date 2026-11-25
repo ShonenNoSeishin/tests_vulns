@@ -315,7 +315,7 @@ fi
 
 # ---------------------------------------------------------------- Bilan
 section "Bilan"
-printf '  vulnérables : %d | à vérifier : %d | corrigés / non concernés : %d\n' "$VULN" "$UNK" "$OK"
+printf '  vulnérables : %d | à vérifier : %d | corrigés : %d | non concernés : %d\n' "$VULN" "$UNK" "$OK" "$NC"
 [ "${#FINDINGS[@]}" -gt 0 ] && printf '  à traiter : %s\n' "${FINDINGS[*]}"
 if [ "$VULN" -gt 0 ]; then echo "Confiance : élément vulnérable CONFIRMÉ"; exit 2; fi
 if [ "$UNK" -gt 0 ]; then echo "Confiance : INCOMPLÈTE (au moins un élément à vérifier à la main)"; exit 1; fi

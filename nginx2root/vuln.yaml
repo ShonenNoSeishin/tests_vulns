@@ -3,7 +3,7 @@ title: "NGINX2Root — RCE non authentifiée via HTTP/2 dans nginx"
 cves: [CVE-2026-123007, CVE-2026-123633]
 severity: critical
 published: 2026-11-18
-updated: 2026-11-23
+updated: 2026-11-25
 exploited: false
 kev: false
 summary: >-
