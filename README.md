@@ -13,8 +13,9 @@ Les scripts de `php2shell/` et `broccoli2shell/` sont en **lecture seule par dé
 |---|---|---|---|---|
 | 19/11/2026 | **PHP** — lot de correctifs (18 CVE, use-after-free/RCE conditionnelles) · CVE-2026-129474, CVE-2026-129496, +16 autres | 🔴 Critique | non connue | [`php-novembre-2026/`](php-novembre-2026/) |
 | 18/11/2026 (maj 20/11) | **NGINX2Root** — RCE non authentifiée via HTTP/2 · CVE-2026-123007, CVE-2026-123633 | 🔴 Critique | PoC public | [`nginx2root/`](nginx2root/) |
+| 18/11/2026 (dossier ajouté 25/11) | **Drupal2Root** — RCE/prise de contrôle non authentifiée via install.php · CVE-2026-132165 | 🔴 Critique | ✅ KEV | [`drupal2root/`](drupal2root/) |
 | 12/11/2026 | **sshole** — contournement de mot de passe OpenSSH (Alpine/musl) · CVE-2026-123158 | 🟠 Haute | ✅ KEV | [`sshole-cve-2026-123158/`](sshole-cve-2026-123158/) |
-| 11/11/2026 (dossier ajouté 24/11) | **Apache2Root** — RCE non authentifiée via mod_http2 · CVE-2026-119618 | 🔴 Critique | non connue | [`apache2root/`](apache2root/) |
+| 11/11/2026 (dossier ajouté 24/11, maj 25/11) | **Apache2Root** — RCE non authentifiée via mod_http2 · CVE-2026-119618 | 🔴 Critique | signalée (pas KEV) | [`apache2root/`](apache2root/) |
 | 10/11/2026 (maj 19/11) | **Fortinet** — lot de novembre (FGFM, API JRPC, OSPF) · CVE-2026-126261, CVE-2026-126170, CVE-2026-126253 | 🔴 Critique | non connue | [`fortinet-novembre-2026/`](fortinet-novembre-2026/) |
 | 10-12/11/2026 | **Proxmox VE** — lot d'avis (injection shell volume/upload → root, 5 avis mineurs) · pas de CVE | 🔴 Critique | non connue | [`proxmox-novembre-2026/`](proxmox-novembre-2026/) |
 | 05/11/2026 | **APT** — contournement de signature → root · CVE-2026-109518 | 🟠 Haute | non connue | [`cve-2026-109518/`](cve-2026-109518/) |
