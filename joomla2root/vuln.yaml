@@ -1,0 +1,84 @@
+id: joomla2root
+title: "Joomla2Root — authentification manquante dans l'installeur web de Joomla CMS"
+cves: [CVE-2026-123214]
+severity: critical
+published: 2026-11-26
+updated: 2026-11-27
+exploited: false
+kev: false
+summary: >-
+  Avis officiel Joomla [20261111] "Core - Missing authentication in web installer". Tant que le dossier /installation existe encore
+  sur un site Joomla déjà installé, un attaquant SANS authentification peut relancer l'installeur et réécrire configuration.php
+  (identifiants base de données, clé secrète) -- prise de contrôle complète du site. CVSS 4.0 9.2 Critical (vecteur
+  CVSS:4.0/AV:N/AC:L/AT:P/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N), attribué le 24/11/2026 par le CNA Joomla! Project lui-même (statut
+  NVD "Deferred"). Le segment AT:P ("Attack Requirements: Present") confirme la précondition : Joomla lui-même qualifie l'impact de
+  Critical mais la probabilité d'exploitation de Low (grille de risque propre à l'avis : Impact Critical / Severity Moderate /
+  Probability Low). Corrigé le 24/11/2026 en 5.4.11 (branche continue 4.x/5.x) et 6.2.1 (branche 6.x). Joomla n'est pas distribué via un
+  paquet système -- aucun rétroportage distro, la version du code source (libraries/src/Version.php) fait foi. Aucun exploit public ni
+  exploitation active connue à ce jour.
+affects:
+  - "Joomla CMS 4.0.0 à 5.4.10 (branche continue 4.x/5.x)"
+  - "Joomla CMS 6.0.0 à 6.2.0 (branche 6.x)"
+concerned:
+  - "Un site fait tourner Joomla 4.0.0-5.4.10 ou 6.0.0-6.2.0 ET le dossier /installation existe encore à la racine du site (précondition CVSS AT:P)."
+  - "Même sans /installation présent actuellement : le code reste vulnérable et le dossier peut être recréé par un futur déploiement -- la mise à jour de version reste recommandée."
+not_concerned:
+  - "Aucune installation Joomla (libraries/src/Version.php absent), ou version déjà corrigée de sa branche (>= 5.4.11 / 6.2.1)."
+  - "Joomla 3.x et antérieur : architecture différente (fichier libraries/cms/version/version.php), hors du périmètre de cette CVE précise."
+impact:
+  - {product: "Proxmox VE", status: "not_impacted", note: "L'interface de gestion Proxmox (pveproxy) n'utilise pas Joomla"}
+  - {product: "Docker", status: "to_check", note: "Dépend si un conteneur fait tourner Joomla en version vulnérable avec /installation présent"}
+  - {product: "LXC", status: "to_check", note: "Dépend si le conteneur fait tourner Joomla en version vulnérable avec /installation présent"}
+  - {product: "Veeam", status: "not_impacted"}
+  - {product: "Nakivo", status: "not_impacted"}
+  - {product: "3CX", status: "not_impacted", note: "3CX embarque son propre nginx, pas Joomla"}
+  - {product: "Elastix", status: "not_impacted", note: "FreePBX/Elastix utilise son propre framework d'administration, pas Joomla"}
+  - {product: "Andrisoft WANGuard", status: "not_impacted", note: "Console web PHP, aucune indication d'une dépendance Joomla"}
+  - {product: "Datalust Seq", status: "not_impacted", note: "Application .NET avec serveur web intégré (Kestrel), pas Joomla"}
+  - {product: "LibreNMS", status: "not_impacted", note: "Application PHP indépendante, pas basée sur Joomla"}
+  - {product: "Observium", status: "not_impacted", note: "Application PHP indépendante, pas basée sur Joomla"}
+  - {product: "Debian", status: "not_impacted", note: "L'OS lui-même n'est pas en cause -- Joomla n'est pas un paquet système"}
+  - {product: "Ubuntu", status: "not_impacted", note: "L'OS lui-même n'est pas en cause -- Joomla n'est pas un paquet système"}
+  - {product: "Windows Server (2012/2016/2019/2022/2025)", status: "to_check", note: "Joomla sous Windows est rare (pas de build officiel) mais possible via IIS+PHP ou Docker Desktop"}
+  - {product: "SMB (Samba, Debian)", status: "not_impacted"}
+  - {product: "SFTP (Debian)", status: "not_impacted"}
+  - {product: "Cisco", status: "not_impacted"}
+  - {product: "Ubiquiti", status: "not_impacted"}
+  - {product: "HP/Aruba", status: "not_impacted"}
+  - {product: "FortiGate", status: "not_impacted"}
+  - {product: "FortiAnalyzer", status: "not_impacted"}
+  - {product: "FortiManager", status: "not_impacted"}
+  - {product: "Sophos", status: "not_impacted"}
+  - {product: "nginx", status: "not_impacted", note: "nginx n'est pas Joomla ; s'il sert de reverse-proxy devant un site Joomla, vérifier Joomla séparément"}
+  - {product: "Certbot", status: "not_impacted", note: "Certbot ne fait qu'éditer la configuration TLS, aucun lien avec Joomla"}
+  - {product: "Odoo (self-hosted)", status: "not_impacted", note: "Odoo est un framework Python/Flask, aucune dépendance Joomla"}
+  - {product: "Nextcloud", status: "not_impacted", note: "Nextcloud est une application PHP indépendante, pas basée sur Joomla"}
+  - {product: "JumpCloud", status: "not_impacted"}
+  - {product: "Python", status: "not_impacted"}
+  - {product: "Django", status: "not_impacted"}
+  - {product: "React", status: "not_impacted"}
+  - {product: "PHP", status: "to_check", note: "Le moteur PHP lui-même n'est pas en cause, mais Joomla impose une version PHP minimale selon la branche -- une mise à jour Joomla peut nécessiter une mise à jour PHP associée"}
+  - {product: "MikroTik", status: "not_impacted"}
+  - {product: "Ceph", status: "not_impacted"}
+  - {product: "QEMU-KVM", status: "not_impacted"}
+tests:
+  - {os: linux, label: "Linux / macOS (hôte + conteneurs)", file: test_joomla2root.sh, run: "chmod +x test_joomla2root.sh && sudo ./test_joomla2root.sh --scan-images", note: "Lecture seule. --scan-images inspecte aussi les images locales."}
+  - {os: windows, label: "Windows (IIS/XAMPP/WAMP/Laragon, Docker Desktop)", file: Test-Joomla2Root.ps1, run: ".\\Test-Joomla2Root.ps1 -ScanImages", note: "À lancer dans PowerShell. Joomla sous Windows natif est rare ; le cas le plus probable est Docker Desktop."}
+results:
+  - {status: "VULNÉRABLE", meaning: "Version Joomla vulnérable confirmée (4.0.0-5.4.10 ou 6.0.0-6.2.0), que /installation soit présent ou non.", action: "Mettre à jour vers 5.4.11/6.2.1 selon la branche ET supprimer /installation, puis revérifier."}
+  - {status: "À VÉRIFIER", meaning: "Version illisible, numéro de version non reconnu (ex. Joomla 3.x ou antérieur), ou configuration.php absent.", action: "Comparer manuellement (README)."}
+  - {status: "CORRIGÉ", meaning: "Version >= seuil corrigé de sa branche (peut tout de même signaler que /installation est encore présent, à supprimer par bonne pratique).", action: "Rien côté version ; supprimer /installation si encore présent."}
+  - {status: "NON CONCERNÉ", meaning: "Aucune installation Joomla 4/5/6 trouvée dans les emplacements scannés.", action: "Rien dans l'immédiat pour cette CVE précise ; vérifier manuellement tout docroot hors des emplacements usuels, et toute installation Joomla 3.x ou antérieure séparément (voir README, Limites connues)."}
+fix:
+  - {for: "Étape 1 -- mise à jour standard via le gestionnaire de mises à jour Joomla (com_joomlaupdate)", command: "Administration Joomla : Système -> Maintenance -> Mises à jour, appliquer jusqu'à la dernière version de la branche (5.4.11 ou 6.2.1). Sauvegarder le site avant."}
+  - {for: "Étape 2 -- OBLIGATOIRE, toujours, quelle que soit la version", command: "Supprimer le dossier /installation à la racine du site : rm -rf /chemin/vers/le/site/installation -- recommandé même après mise à jour, par bonne pratique de durcissement, et à réappliquer après chaque redéploiement."}
+  - {for: "Étape 3 -- vérification OBLIGATOIRE", command: "Relancer test_joomla2root.sh/Test-Joomla2Root.ps1. Si encore [VULNÉRABLE], la mise à jour n'a pas atteint le seuil corrigé de sa branche (5.4.11/6.2.1) -- vérifier la version affichée dans Système -> Informations système."}
+  - {for: "Mitigation immédiate, si la mise à jour doit attendre (réduit l'exposition à cette CVE précise)", command: "rm -rf /chemin/vers/le/site/installation   # neutralise le vecteur d'exploitation documenté, même sur une version non encore mise à jour"}
+  - {for: "Image Docker officielle joomla", command: "docker pull joomla:5.4.11   # ou joomla:6.2.1 selon la branche -- tags non encore publiés au 27/11/2026, vérifier leur disponibilité ; appliquer la mitigation /installation en attendant"}
+  - {for: "Étape finale -- toujours", command: "Relancer test_joomla2root.sh/Test-Joomla2Root.ps1 une dernière fois et confirmer [CORRIGÉ] (sans mention de /installation encore présent) avant de considérer la faille traitée."}
+fixed_versions: "Joomla 5.4.11 (branche continue 4.0.0-5.4.10) ; Joomla 6.2.1 (branche 6.0.0-6.2.0), toutes deux publiées le 24/11/2026. Mitigation immédiate recommandée dans tous les cas : supprimer le dossier /installation."
+docs: [README.md]
+references:
+  - {title: "Avis officiel Joomla — [20261111] Core - Missing authentication in web installer", url: "https://developer.joomla.org/security-centre/1109-20261111-core-missing-authentication-in-web-installer.html"}
+  - {title: "NVD — CVE-2026-123214", url: "https://nvd.nist.gov/vuln/detail/CVE-2026-123214"}
+  - {title: "Image Docker officielle joomla", url: "https://hub.docker.com/_/joomla"}

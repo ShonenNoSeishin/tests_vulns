@@ -157,6 +157,8 @@ script avec `--scan-images`/`-ScanImages` (sinon une image jamais démarrée res
 | nfs2root (CVE-2026-99362) | Proxmox VE / Debian 12 (bookworm) / Debian 13 (trixie), noyau antérieur au correctif | [`nfs2root/README.md`](nfs2root/README.md) | `apt update && apt upgrade && reboot` (migrer les VM avant, un nœud Proxmox à la fois) |
 | nfs2root (CVE-2026-99362) | Ubuntu, toutes branches, aucun correctif disponible | [`nfs2root/README.md`](nfs2root/README.md) — "Comment corriger" | Mitigation : désactiver `nfs-kernel-server` si inutile, sinon restreindre le port 2049/tcp par pare-feu ; surveiller `ubuntu.com/security/CVE-2026-99362` |
 | nfs2root (CVE-2026-99362) | Serveur NFS non nécessaire sur la machine (toute distribution) | [`nfs2root/README.md`](nfs2root/README.md) — "Comment corriger" | `systemctl stop nfs-kernel-server && systemctl disable nfs-kernel-server` — action L1 immédiate, sans risque |
+| Joomla2Root (CVE-2026-123214) | Joomla 4.0.0-5.4.10 / 6.0.0-6.2.0, dossier `/installation` encore présent | [`joomla2root/README.md`](joomla2root/README.md) | `rm -rf installation/` immédiatement (mitigation directe), puis mise à jour vers 5.4.11/6.2.1 via `com_joomlaupdate` |
+| Joomla2Root (CVE-2026-123214) | Joomla version très ancienne, mise à jour directe vers 5.4.11/6.2.1 risquée (extensions/templates) | [`joomla2root/README.md`](joomla2root/README.md) — "Comment corriger" | Migration par étapes à planifier (escalade équipe sécu/infra) ; en attendant, supprimer `/installation` suffit à neutraliser cette CVE précise |
 
 Dans tous les cas : après toute action, **relancer le script correspondant**
 (`test_php2shell.sh`/`Test-Php2Shell.ps1`, `test_broccoli2shell.sh`/`Test-Broccoli2Shell.ps1`,
