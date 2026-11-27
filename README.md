@@ -11,6 +11,7 @@ Les scripts de `php2shell/` et `broccoli2shell/` sont en **lecture seule par dé
 
 | Date | Faille (CVE) | Gravité | Exploitée ? | Dossier |
 |---|---|---|---|---|
+| 26/11/2026 (dossier ajouté 27/11) | **nfs2root** — heap overflow pré-authentifié dans le serveur NFS (nfsd) du noyau Linux · CVE-2026-99362 | 🔴 Critique | non connue | [`nfs2root/`](nfs2root/) |
 | 19/11/2026 | **PHP** — lot de correctifs (18 CVE, use-after-free/RCE conditionnelles) · CVE-2026-129474, CVE-2026-129496, +16 autres | 🔴 Critique | non connue | [`php-novembre-2026/`](php-novembre-2026/) |
 | 18/11/2026 (maj 20/11) | **NGINX2Root** — RCE non authentifiée via HTTP/2 · CVE-2026-123007, CVE-2026-123633 | 🔴 Critique | PoC public | [`nginx2root/`](nginx2root/) |
 | 18/11/2026 (dossier ajouté 25/11) | **Drupal2Root** — RCE/prise de contrôle non authentifiée via install.php · CVE-2026-132165 | 🔴 Critique | ✅ KEV | [`drupal2root/`](drupal2root/) |

@@ -154,6 +154,9 @@ script avec `--scan-images`/`-ScanImages` (sinon une image jamais démarrée res
 | Drupal2Root (CVE-2026-132165) | Drupal Core < 10.6.22 / 11.3.22 / 11.4.13 (branche encore maintenue) | [`drupal2root/README.md`](drupal2root/README.md) | `composer require 'drupal/core:^10.6.22'` (adapter le numéro à la branche) puis `drush updatedb -y` |
 | Drupal2Root (CVE-2026-132165) | Drupal 7/8/9, ou branche 10.5.x/11.2.x et antérieure (fin de vie, aucun correctif direct) | [`drupal2root/README.md`](drupal2root/README.md) — "Comment corriger" | Migration de branche majeure obligatoire (à escalader équipe sécu/infra) ; en attendant, bloquer l'accès réseau à `/core/install.php` côté serveur web |
 | Proxmox novembre 2026 (PSA-00088 à 00095) | Nœud Proxmox VE, paquets `pve-*`/`libpve-*` antérieurs aux correctifs | [`proxmox-novembre-2026/README.md`](proxmox-novembre-2026/README.md) | `apt update && apt full-upgrade` (une seule opération couvre les sept avis) |
+| nfs2root (CVE-2026-99362) | Proxmox VE / Debian 12 (bookworm) / Debian 13 (trixie), noyau antérieur au correctif | [`nfs2root/README.md`](nfs2root/README.md) | `apt update && apt upgrade && reboot` (migrer les VM avant, un nœud Proxmox à la fois) |
+| nfs2root (CVE-2026-99362) | Ubuntu, toutes branches, aucun correctif disponible | [`nfs2root/README.md`](nfs2root/README.md) — "Comment corriger" | Mitigation : désactiver `nfs-kernel-server` si inutile, sinon restreindre le port 2049/tcp par pare-feu ; surveiller `ubuntu.com/security/CVE-2026-99362` |
+| nfs2root (CVE-2026-99362) | Serveur NFS non nécessaire sur la machine (toute distribution) | [`nfs2root/README.md`](nfs2root/README.md) — "Comment corriger" | `systemctl stop nfs-kernel-server && systemctl disable nfs-kernel-server` — action L1 immédiate, sans risque |
 
 Dans tous les cas : après toute action, **relancer le script correspondant**
 (`test_php2shell.sh`/`Test-Php2Shell.ps1`, `test_broccoli2shell.sh`/`Test-Broccoli2Shell.ps1`,

@@ -1,0 +1,83 @@
+id: nfs2root
+title: "nfs2root — heap overflow pré-authentifié dans le serveur NFS (nfsd) du noyau Linux"
+cves: [CVE-2026-99362]
+severity: critical
+published: 2026-11-26
+updated: 2026-11-27
+exploited: false
+kev: false
+summary: >-
+  Un heap overflow dans le code nfsd (serveur NFS) du noyau Linux permet à un client NFSv4.1
+  malveillant, sans authentification, d'exécuter du code noyau (root) sur un serveur NFS exposé.
+  Proxmox qualifie la faille de "pre-auth root RCE" (PSA-2026-00103-1, 26/11/2026). Corrigée pour
+  Proxmox VE et Debian (12/13) ; Ubuntu n'a aucun correctif disponible à ce jour sur aucune
+  branche. Exploitable uniquement si un serveur NFS (nfsd) est réellement actif et accessible sur
+  le réseau -- une machine purement cliente NFS n'est pas exposée par ce vecteur, mais le noyau
+  reste à corriger partout par principe de précaution.
+affects:
+  - "Noyau Linux (code fs/nfsd/) -- Proxmox VE (branches 7.0 et 7.3), Debian 12/13, Ubuntu (toutes branches, pas encore corrigé)"
+tags: [noyau, linux, proxmox, nfs, nfsd]
+concerned:
+  - "Toute machine Linux faisant tourner un serveur NFS (nfsd/nfs-kernel-server) exposé sur le réseau (port 2049)."
+  - "Toute machine Linux par principe de précaution : le paquet noyau est vulnérable même si nfsd n'est pas actif actuellement."
+not_concerned:
+  - "Windows Server natif (noyau NT), y compris le rôle \"Server for NFS\" (implémentation Microsoft indépendante)."
+  - "Machine agissant uniquement comme client NFS, sans jamais activer nfsd localement."
+impact:
+  - {product: "Proxmox VE", status: "impacted", note: "Noyau directement concerné (PSA-2026-00103-1) ; exposition réseau réelle dépend d'un service NFS actif -- voir script"}
+  - {product: "Docker", status: "to_check", note: "Partage le noyau de l'hôte ; nfsd tourne presque toujours sur l'hôte, pas dans un conteneur, sauf conteneur privilégié configuré explicitement en serveur NFS (atypique)"}
+  - {product: "LXC", status: "to_check", note: "Même raison que Docker"}
+  - {product: "Veeam", status: "not_impacted", note: "Application, pas de rôle serveur NFS documenté"}
+  - {product: "Nakivo", status: "not_impacted", note: "Application, pas de rôle serveur NFS documenté"}
+  - {product: "3CX", status: "not_impacted", note: "Application PBX, pas de rôle serveur NFS"}
+  - {product: "Elastix", status: "not_impacted", note: "Application PBX, pas de rôle serveur NFS"}
+  - {product: "Andrisoft WANGuard", status: "not_impacted", note: "Application de supervision, pas de rôle serveur NFS"}
+  - {product: "Datalust Seq", status: "not_impacted", note: "Application de supervision, pas de rôle serveur NFS"}
+  - {product: "LibreNMS", status: "not_impacted", note: "Application de supervision, pas de rôle serveur NFS"}
+  - {product: "Observium", status: "not_impacted", note: "Application de supervision, pas de rôle serveur NFS"}
+  - {product: "Debian", status: "impacted", note: "Noyau directement concerné (bookworm et trixie, voir tableau README)"}
+  - {product: "Ubuntu", status: "impacted", note: "Noyau directement concerné, aucun correctif disponible à ce jour (27/11/2026) -- voir section correction du README"}
+  - {product: "Windows Server (2012/2016/2019/2022/2025)", status: "not_impacted", note: "Noyau NT, pas Linux ; le rôle natif \"Server for NFS\" est une implémentation indépendante, non concernée. Seule exception WSL2, couverte par le script PowerShell dédié"}
+  - {product: "SMB (Samba, Debian)", status: "not_impacted", note: "Protocole et code noyau différents (SMB != nfsd) ; voir l'entrée Debian pour le statut du noyau sous-jacent"}
+  - {product: "SFTP (Debian)", status: "not_impacted", note: "Protocole et code différents (SFTP != nfsd) ; voir l'entrée Debian pour le statut du noyau sous-jacent"}
+  - {product: "Cisco", status: "not_impacted", note: "Équipement réseau, pas de rôle serveur NFS"}
+  - {product: "Ubiquiti", status: "not_impacted", note: "Équipement réseau, pas de rôle serveur NFS"}
+  - {product: "HP/Aruba", status: "not_impacted", note: "Équipement réseau (switches), pas de rôle serveur NFS"}
+  - {product: "FortiGate", status: "not_impacted", note: "Pas de rôle serveur NFS documenté sur ce produit"}
+  - {product: "FortiAnalyzer", status: "to_check", note: "Peut monter des partages NFS en tant que client (stockage externe de logs) -- rôle client, pas serveur, donc non exposé par ce vecteur précis ; à confirmer selon la configuration exacte"}
+  - {product: "FortiManager", status: "not_impacted", note: "Pas de rôle serveur NFS documenté sur ce produit"}
+  - {product: "Sophos", status: "not_impacted", note: "Pas de rôle serveur NFS documenté sur ces produits"}
+  - {product: "nginx", status: "not_impacted", note: "Application, pas de rôle serveur NFS"}
+  - {product: "Certbot", status: "not_impacted", note: "Application, pas de rôle serveur NFS"}
+  - {product: "Odoo (self-hosted)", status: "not_impacted", note: "Application, pas de rôle serveur NFS documenté"}
+  - {product: "Nextcloud", status: "to_check", note: "Peut être configuré avec un stockage externe NFS, mais en tant que client -- à confirmer selon le déploiement si un serveur NFS est hébergé à proximité"}
+  - {product: "JumpCloud", status: "not_impacted", note: "Service SaaS externe, pas hébergé par nous"}
+  - {product: "Python", status: "not_impacted", note: "Langage, pas de rôle serveur NFS"}
+  - {product: "Django", status: "not_impacted", note: "Framework, pas de rôle serveur NFS"}
+  - {product: "React", status: "not_impacted", note: "Framework frontend, pas de rôle serveur NFS"}
+  - {product: "PHP", status: "not_impacted", note: "Langage, pas de rôle serveur NFS"}
+  - {product: "MikroTik", status: "not_impacted", note: "RouterOS, pas de rôle serveur NFS documenté"}
+  - {product: "Ceph", status: "not_impacted", note: "Protocoles OSD/MON internes distincts ; si CephFS est exporté via NFS-Ganesha (serveur NFS en espace utilisateur), ce composant est indépendant du code noyau nfsd visé par ce CVE"}
+  - {product: "QEMU-KVM", status: "not_impacted", note: "Code de virtualisation indépendant du code serveur NFS ; le noyau hôte sous-jacent est couvert par l'entrée Proxmox VE/Debian/Ubuntu"}
+tests:
+  - {os: linux, label: "Linux (hôte + conteneurs + VM)", file: test_nfs2root.sh, run: "chmod +x test_nfs2root.sh && ./test_nfs2root.sh", note: "Lecture seule. Relancer séparément dans chaque VM Linux -- chaque VM a son propre noyau."}
+  - {os: windows, label: "Windows (WSL2 uniquement)", file: Test-Nfs2Root.ps1, run: ".\\Test-Nfs2Root.ps1", note: "Windows lui-même n'est pas concerné ; le script vérifie WSL2."}
+results:
+  - {status: "VULNÉRABLE", meaning: "Noyau antérieur au correctif (ou Ubuntu, sans correctif disponible à ce jour).", action: "Proxmox/Debian : mettre à jour puis redémarrer. Ubuntu : appliquer la mitigation réseau en attendant un correctif Canonical (voir fix)."}
+  - {status: "À VÉRIFIER", meaning: "Distribution/branche non référencée avec certitude par le script, ou version de paquet illisible.", action: "Vérifier manuellement le security tracker officiel correspondant."}
+  - {status: "OK", meaning: "Noyau corrigé en cours d'exécution.", action: "Rien, sauf si un service NFS est exposé sans nécessité réelle -- le désactiver par principe de moindre privilège."}
+fix:
+  - {for: "Proxmox VE (branches 7.0 et 7.3)", command: "apt update && apt upgrade && reboot   # migrer les VM avant, un nœud à la fois"}
+  - {for: "Debian 12 (bookworm, noyau principal ou backports linux-6.12) / Debian 13 (trixie)", command: "apt update && apt upgrade && reboot"}
+  - {for: "Étape 1 -- Ubuntu, tenter la mise à jour standard (pas garanti, aucun correctif publié à ce jour)", command: "apt update && apt upgrade"}
+  - {for: "Étape 2 -- OBLIGATOIRE, vérifier que l'étape 1 a réellement corrigé", command: "Relancer test_nfs2root.sh. Si encore [VULNÉRABLE], aucun correctif Ubuntu n'existe encore -- passer à l'étape 3. Un message 'already the newest version' ne prouve PAS que c'est corrigé."}
+  - {for: "Étape 3 -- Ubuntu, mitigation en attendant un correctif Canonical", command: "systemctl stop nfs-kernel-server && systemctl disable nfs-kernel-server   # si NFS n'est pas nécessaire ; sinon restreindre l'accès réseau au port 2049/tcp via pare-feu aux seuls clients NFS de confiance"}
+  - {for: "Étape finale -- toujours", command: "Relancer test_nfs2root.sh une dernière fois et confirmer [CORRIGÉ] (ou, pour Ubuntu, documenter la mitigation réseau appliquée) avant de considérer la faille traitée."}
+  - {for: "Mitigation générale, toute distribution, si le serveur NFS n'est pas nécessaire", command: "systemctl stop nfs-kernel-server && systemctl disable nfs-kernel-server"}
+fixed_versions: "Proxmox VE : 7.0.14-30-pve (branche 7.0) / 7.3.3-1-pve (branche 7.3) ; Debian 12 (bookworm) noyau principal 6.1.192-3, noyau backports linux-6.12 6.12.117-1~deb12u1 ; Debian 13 (trixie) 6.12.117-1 (ou 6.12.118-1) ; Ubuntu : aucun correctif disponible à ce jour (27/11/2026), toutes branches 'Vulnerable' ou 'work in progress'."
+docs: [README.md]
+references:
+  - {title: "Proxmox VE — avis de sécurité PSA-2026-00103-1", url: "https://forum.proxmox.com/threads/proxmox-virtual-environment-security-advisories.149331/"}
+  - {title: "Ubuntu Security — CVE-2026-99362", url: "https://ubuntu.com/security/CVE-2026-99362"}
+  - {title: "Debian Security Tracker — CVE-2026-99362", url: "https://security-tracker.debian.org/tracker/CVE-2026-99362"}
+  - {title: "NVD — CVE-2026-99362", url: "https://nvd.nist.gov/vuln/detail/CVE-2026-99362"}
